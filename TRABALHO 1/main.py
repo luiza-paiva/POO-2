@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QComboBox, QMessageBox
 )
 from PySide6.QtGui import QAction
+from PySide6.QtCore import Qt
 
 
 class JanelaAlugar(QDialog):
@@ -71,21 +72,33 @@ class Janela(QMainWindow):
         self.setWindowTitle(f"Locadora - {tipo_usuario}")
         self.resize(800, 600)
 
-        # --- dados em memória (lista de tuplas: titulo, genero) ---
+
         self.filmes = [
-            ("O Poderoso Chefão", "drama"),
-            ("Pânico", "terror"),
-            ("Duna", "ficção científica"),
+            ["O Poderoso Chefão", "drama", "Disponível"],
+            ["Pânico", "terror", "Disponível"],
+            ["Duna", "ficção científica", "Disponível"],
+            ["Titanic", "romance", "Disponível"],
+            ["Interestelar", "ficção científica", "Disponível"],
+            ["John Wick", "ação", "Disponível"],
+            ["Invocação do Mal", "terror", "Disponível"],
+            ["Orgulho e Preconceito", "romance", "Disponível"],
+            ["Clube da Luta", "drama", "Disponível"],
+            ["Mad Max: Estrada da Fúria", "ação", "Disponível"],
+            ["Corra!", "terror", "Disponível"],
+            ["Blade Runner 2049", "ficção científica", "Disponível"],
+            ["Diário de uma Paixão", "romance", "Disponível"],
+            ["Cidade de Deus", "drama", "Disponível"],
+            ["Um Sonho de Liberdade", "drama", "Disponível"],
         ]
 
-        # --- menu Gênero (filtro) ---
+
         self.menuGenero = self.menuBar().addMenu("Gênero")
         for genero in ["romance", "ação", "drama", "terror", "ficção científica"]:
             acao = QAction(genero, self)
             acao.triggered.connect(lambda checked, g=genero: self.filtrar_por_genero(g))
             self.menuGenero.addAction(acao)
 
-        # --- menu Filme + toolbar (muda conforme o tipo de usuário) ---
+
         self.menuFilme = self.menuBar().addMenu("Filme")
         self.barra = QToolBar()
         self.addToolBar(self.barra)
@@ -107,14 +120,22 @@ class Janela(QMainWindow):
             self.barra.addAction(self.acaoEditar)
             self.barra.addAction(self.acaoExcluir)
 
-        else:  # Usuário
+
+        else:
+
             self.acaoAlugar = QAction("Alugar Filme", self)
             self.acaoAlugar.triggered.connect(self.abrir_alugar)
 
-            self.menuFilme.addAction(self.acaoAlugar)
-            self.barra.addAction(self.acaoAlugar)
+            self.acaoDevolver = QAction("Devolver Filme", self)
+            self.acaoDevolver.triggered.connect(self.devolver_filme)
 
-        # --- busca ---
+            self.menuFilme.addAction(self.acaoAlugar)
+            self.menuFilme.addAction(self.acaoDevolver)
+
+            self.barra.addAction(self.acaoAlugar)
+            self.barra.addAction(self.acaoDevolver)
+
+
         self.input = QLineEdit()
         self.input.setPlaceholderText("Buscar filme...")
         self.input.returnPressed.connect(self.buscar_filme)
@@ -122,10 +143,9 @@ class Janela(QMainWindow):
         self.botao = QPushButton("Buscar")
         self.botao.clicked.connect(self.buscar_filme)
 
-        # --- lista de filmes ---
         self.lista = QListWidget()
 
-        # --- layout principal ---
+
         self.textoLocadora = QLabel("Locadora de Filmes")
         self.layoutPrincipal = QVBoxLayout()
         self.layoutPrincipal.addWidget(self.textoLocadora)
@@ -139,12 +159,11 @@ class Janela(QMainWindow):
 
         self.atualizar_lista()
 
-    # ---------- slots ----------
 
     def atualizar_lista(self, filmes=None):
         self.lista.clear()
-        for titulo, genero in (filmes if filmes is not None else self.filmes):
-            self.lista.addItem(f"{titulo} ({genero})")
+        for titulo, genero, status in (filmes if filmes is not None else self.filmes):
+            self.lista.addItem(f"{titulo} ({genero}) - {status}")
 
     def filtrar_por_genero(self, genero):
         filtrados = [f for f in self.filmes if f[1] == genero]
@@ -163,7 +182,7 @@ class Janela(QMainWindow):
             if not titulo:
                 QMessageBox.warning(self, "Aviso", "Digite um título.")
                 return
-            self.filmes.append((titulo, genero))
+            self.filmes.append([titulo, genero, "Disponível"])
             self.atualizar_lista()
 
     def editar_filme(self):
@@ -173,7 +192,7 @@ class Janela(QMainWindow):
             return
 
         indice = self.lista.currentRow()
-        titulo_atual, genero_atual = self.filmes[indice]
+        titulo_atual, genero_atual, status_atual = self.filmes[indice]
 
         dialog = JanelaCadastro(titulo_atual, genero_atual)
         if dialog.exec() == QDialog.Accepted:
@@ -182,7 +201,7 @@ class Janela(QMainWindow):
             if not novo_titulo:
                 QMessageBox.warning(self, "Aviso", "Digite um título.")
                 return
-            self.filmes[indice] = (novo_titulo, novo_genero)
+            self.filmes[indice] = [novo_titulo, novo_genero, status_atual]
             self.atualizar_lista()
 
     def excluir_filme(self):
@@ -192,7 +211,7 @@ class Janela(QMainWindow):
             return
 
         indice = self.lista.currentRow()
-        titulo, _ = self.filmes[indice]
+        titulo, _, _ = self.filmes[indice]
 
         resposta = QMessageBox.question(
             self, "Confirmar exclusão", f"Excluir '{titulo}'?"
@@ -208,11 +227,48 @@ class Janela(QMainWindow):
             return
 
         indice = self.lista.currentRow()
-        titulo, genero = self.filmes[indice]
+        titulo, genero, status = self.filmes[indice]
+
+        if status == "Alugado":
+            QMessageBox.warning(self, "Indisponível", f"'{titulo}' já está alugado.")
+            return
 
         dialog = JanelaAlugar(titulo, genero)
         if dialog.exec() == QDialog.Accepted:
+            self.filmes[indice][2] = "Alugado"
+            self.atualizar_lista()
             QMessageBox.information(self, "Sucesso", f"'{titulo}' alugado com sucesso!")
+
+    def devolver_filme(self):
+        item = self.lista.currentItem()
+        if item is None:
+            QMessageBox.warning(self, "Aviso", "Selecione um filme para devolver.")
+            return
+
+        indice = self.lista.currentRow()
+        titulo, genero, status = self.filmes[indice]
+
+        if status == "Disponível":
+            QMessageBox.warning(self, "Aviso", f"'{titulo}' não está alugado.")
+            return
+
+        resposta = QMessageBox.question(self, "Confirmar devolução", f"Devolver '{titulo}'?")
+        if resposta == QMessageBox.Yes:
+            self.filmes[indice][2] = "Disponível"
+            self.atualizar_lista()
+            QMessageBox.information(self, "Sucesso", f"'{titulo}' devolvido com sucesso!")
+
+
+    def closeEvent(self, event):
+        resposta = QMessageBox.question(self, "Sair", "Deseja realmente sair da locadora?")
+        if resposta == QMessageBox.Yes:
+            event.accept()
+        else:
+            event.ignore()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Delete and self.tipo_usuario == "Admin":
+            self.excluir_filme()
 
 
 class JanelaLogin(QMainWindow):
