@@ -4,7 +4,6 @@ from PySide6.QtWidgets import QApplication
 
 from janelaLogin import JanelaLogin
 
-
 def main():
     app = QApplication(sys.argv)
 
