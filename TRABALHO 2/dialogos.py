@@ -1,0 +1,57 @@
+import sys
+from PySide6.QtWidgets import (
+    QWidget, QApplication, QMainWindow, QToolBar, QLabel, QLineEdit,
+    QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QDialog,
+    QFormLayout, QComboBox, QMessageBox
+)
+from PySide6.QtGui import QAction
+from PySide6.QtCore import Qt
+from models import Filme
+from repositorio import RepositorioFilmes
+
+class JanelaAlugar(QDialog):
+    def __init__(self, titulo_filme="", genero_filme=""):
+        super().__init__()
+        self.setWindowTitle("Alugar Filme")
+        self.resize(300, 150)
+
+        self.campoFilme = QLineEdit(titulo_filme)
+        self.campoFilme.setEnabled(False)
+
+        self.campoGenero = QLineEdit(genero_filme)
+        self.campoGenero.setEnabled(False)
+
+        self.botaoConfirmar = QPushButton("Confirmar Aluguel")
+        self.botaoConfirmar.clicked.connect(self.accept)
+
+        layout = QFormLayout()
+        layout.addRow("Filme:", self.campoFilme)
+        layout.addRow("Gênero:", self.campoGenero)
+        layout.addRow(self.botaoConfirmar)
+        self.setLayout(layout)
+
+
+class JanelaCadastro(QDialog):
+    def __init__(self, titulo="", genero=""):
+        super().__init__()
+        self.setWindowTitle("Cadastrar/Editar Filme")
+        self.resize(300, 150)
+
+        self.campoTitulo = QLineEdit(titulo)
+        self.campoGenero = QComboBox()
+        self.campoGenero.addItems(["romance", "ação", "drama", "terror", "ficção científica"])
+        if genero:
+            self.campoGenero.setCurrentText(genero)
+
+        self.botaoSalvar = QPushButton("Salvar")
+        self.botaoSalvar.clicked.connect(self.accept)
+
+        layout = QFormLayout()
+        layout.addRow("Título:", self.campoTitulo)
+        layout.addRow("Gênero:", self.campoGenero)
+        layout.addRow(self.botaoSalvar)
+        self.setLayout(layout)
+
+    def closeEvent(self, event):
+        print("Janela de cadastro fechada")
+        event.accept()
