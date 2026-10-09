@@ -32,6 +32,6 @@ class historico():
             if not self.caminho.exists():
                 return []
             with open(self.caminho, "r", newline="", encoding="utf-8-sig") as arquivo:
-                registros = list(csv.DictReader(arquivo, delimeter=";"))
+                registros = list(csv.DictReader(arquivo, delimiter=";"))
         registros.reverse()
         return registros

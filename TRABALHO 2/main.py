@@ -2,7 +2,7 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from janela_login import JanelaLogin
+from janelaLogin import JanelaLogin
 
 
 def main():

@@ -49,6 +49,6 @@ class JanelaLogin(QMainWindow):
             return
 
         tipo = self.campoTipo.currentText()
-        self.janelaPrincipal = Janela(tipo)
+        self.janelaPrincipal = Janela(login, tipo)
         self.janelaPrincipal.show()
         self.close()

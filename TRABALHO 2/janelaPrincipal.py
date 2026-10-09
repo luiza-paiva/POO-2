@@ -6,17 +6,23 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
-from models import Filme
+from models import Filme, ALUGADO, DISPONIVEL
 from repositorio import RepositorioFilmes
+from historicoAlgueis import historico
+from dialogos import JanelaAlugar
+from dialogos import JanelaCadastro
+
 
 class Janela(QMainWindow):
-    def __init__(self, tipo_usuario="Usuário"):
+    def __init__(self, login,tipo_usuario="Usuário"):
         super().__init__()
         self.tipo_usuario = tipo_usuario
+        self.login = login
         self.setWindowTitle(f"Locadora - {tipo_usuario}")
         self.resize(800, 600)
 
         self.repositorio = RepositorioFilmes()
+        self.historico = historico()
         self.filmes = self.repositorio.carregar()
 
         self.menuGenero = self.menuBar().addMenu("Gênero")
@@ -154,43 +160,40 @@ class Janela(QMainWindow):
             self.atualizar_lista()
 
     def abrir_alugar(self):
-        item = self.lista.currentItem()
-        if item is None:
+        filme = self.filme_selecionado()
+        if filme is None:
             QMessageBox.warning(self, "Aviso", "Selecione um filme para alugar.")
             return
 
-        indice = self.lista.currentRow()
-        titulo, genero, status = self.filmes[indice]
-
-        if status == "Alugado":
-            QMessageBox.warning(self, "Indisponível", f"'{titulo}' já está alugado.")
+        if not filme.disponivel:
+            QMessageBox.warning(self, "Indisponível", f"'{filme.titulo}' já está alugado.")
             return
 
-        dialog = JanelaAlugar(titulo, genero)
+        dialog = JanelaAlugar(filme.titulo, filme.genero)
         if dialog.exec() == QDialog.Accepted:
-            self.filmes[indice][2] = "Alugado"
+            filme.status = ALUGADO
+            self.repositorio.salvar(self.filmes)
+            self.historico.registrar(self.login, filme.titulo, "Aluguel")
             self.atualizar_lista()
-            QMessageBox.information(self, "Sucesso", f"'{titulo}' alugado com sucesso!")
+            QMessageBox.information(self, "Sucesso", f"'{filme.titulo}' alugado com sucesso!")
 
     def devolver_filme(self):
-        item = self.lista.currentItem()
-        if item is None:
+        filme = self.filme_selecionado()
+        if filme is None:
             QMessageBox.warning(self, "Aviso", "Selecione um filme para devolver.")
             return
 
-        indice = self.lista.currentRow()
-        titulo, genero, status = self.filmes[indice]
-
-        if status == "Disponível":
-            QMessageBox.warning(self, "Aviso", f"'{titulo}' não está alugado.")
+        if filme.disponivel:
+            QMessageBox.warning(self, "Aviso", f"'{filme.titulo}' não está alugado.")
             return
 
-        resposta = QMessageBox.question(self, "Confirmar devolução", f"Devolver '{titulo}'?")
+        resposta = QMessageBox.question(self, "Confirmar devolução", f"Devolver '{filme.titulo}'?")
         if resposta == QMessageBox.Yes:
-            self.filmes[indice][2] = "Disponível"
+            filme.status = DISPONIVEL
+            self.repositorio.salvar(self.filmes)
+            self.historico.registrar(self.login, filme.titulo, "Devolução")
             self.atualizar_lista()
-            QMessageBox.information(self, "Sucesso", f"'{titulo}' devolvido com sucesso!")
-
+            QMessageBox.information(self, "Sucesso", f"'{filme.titulo}' devolvido com sucesso!")
 
     def closeEvent(self, event):
         resposta = QMessageBox.question(self, "Sair", "Deseja realmente sair da locadora?")
