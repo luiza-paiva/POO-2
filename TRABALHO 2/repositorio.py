@@ -28,21 +28,11 @@ FILMES_INICIAIS = [
 
 
 class RepositorioFilmes:
-    """Lê e grava a lista de filmes em um arquivo JSON.
-
-    Args:
-        caminho: caminho do arquivo. Por padrão, dados/filmes.json.
-    """
 
     def __init__(self, caminho: Path | None = None):
         self.caminho = Path(caminho) if caminho else PASTA_DADOS / "filmes.json"
 
     def carregar(self) -> list[Filme]:
-        """Carrega os filmes do arquivo.
-
-        Se o arquivo não existir, cria o catálogo inicial e o grava.
-        Se estiver corrompido, move-o para .bak e recomeça do catálogo inicial.
-        """
         if not self.caminho.exists():
             filmes = self._filmes_iniciais()
             self.salvar(filmes)
@@ -58,11 +48,6 @@ class RepositorioFilmes:
             return filmes
 
     def salvar(self, filmes: list[Filme]) -> None:
-        """Grava os filmes no arquivo de forma atômica.
-
-        Escreve em um arquivo temporário e depois o substitui, evitando
-        deixar o JSON pela metade se o programa for interrompido.
-        """
         self.caminho.parent.mkdir(parents=True, exist_ok=True)
         temporario = self.caminho.with_suffix(".json.tmp")
         with open(temporario, "w", encoding="utf-8") as f:
