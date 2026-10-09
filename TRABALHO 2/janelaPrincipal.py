@@ -8,6 +8,8 @@ from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
 from models import Filme
 from repositorio import RepositorioFilmes
+from tarefas_arquivo import GravarDados
+from historicoAlgueis import historico
 
 class Janela(QMainWindow):
     def __init__(self, tipo_usuario="Usuário"):
@@ -18,6 +20,9 @@ class Janela(QMainWindow):
 
         self.repositorio = RepositorioFilmes()
         self.filmes = self.repositorio.carregar()
+
+        self.historico = historico()  
+        self.tarefas = []  
 
         self.menuGenero = self.menuBar().addMenu("Gênero")
         for genero in ["romance", "ação", "drama", "terror", "ficção científica"]:
@@ -118,7 +123,7 @@ class Janela(QMainWindow):
                 QMessageBox.warning(self, "Aviso", "Digite um título.")
                 return
             self.filmes.append(Filme(titulo, genero))
-            self.repositorio.salvar(self.filmes)
+            self.salvar_em_segundo_plano()
             self.atualizar_lista()
 
     def editar_filme(self):
@@ -136,7 +141,7 @@ class Janela(QMainWindow):
                 return
             filme.titulo = novo_titulo
             filme.genero = novo_genero
-            self.repositorio.salvar(self.filmes)
+            self.salvar_em_segundo_plano() 
             self.atualizar_lista()
 
     def excluir_filme(self):
@@ -150,7 +155,7 @@ class Janela(QMainWindow):
         )
         if resposta == QMessageBox.Yes:
             self.filmes.remove(filme)
-            self.repositorio.salvar(self.filmes)
+            self.salvar_em_segundo_plano() 
             self.atualizar_lista()
 
     def abrir_alugar(self):
@@ -202,3 +207,10 @@ class Janela(QMainWindow):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Delete and self.tipo_usuario == "Admin":
             self.excluir_filme()
+
+    def salvar_em_segundo_plano(self, registro=None):
+        tarefa = GravarDados(self.repositorio, self.filmes, self.historico, registro)
+        tarefa.erro.connect(lambda msg: QMessageBox.critical(self, "Erro ao salvar", msg))
+        tarefa.finished.connect(lambda t=tarefa: self.tarefas.remove(t))
+        self.tarefas.append(tarefa)
+        tarefa.start()
