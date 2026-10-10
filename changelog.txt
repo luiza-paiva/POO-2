@@ -1,0 +1,19 @@
+Changelog - Locadora de Filmes 
+Integrantes: Victor Hugo da Silva Ferreira, Luiza Oliveira Paiva e Samuel de Carvalho Rodrigues3
+
+Adicionado - Arquivos
+- Persistência do catálogo de filmes em dados/filmes.json
+  (repositorio.py), com carregamento na abertura do programa.
+- Histórico de aluguéis e devoluções em dados/alugueis.csv
+  (historicoAlgueis.py), com registro de data/hora, usuário, filme e ação.
+
+Adicionado - Threads
+- Classe GravarDados (tarefas_arquivo.py), uma QThread que grava o
+  catálogo em segundo plano, sem travar a interface.
+- Método salvar_em_segundo_plano na janela principal, usado ao
+  cadastrar, editar e excluir filmes.
+- threading.Lock no histórico para evitar escrita simultânea no CSV.
+
+Adicionado - Interface
+- A janela principal passa a receber o login do usuário, usado no
+  registro do histórico.
