@@ -21,3 +21,17 @@ class GravarDados(QThread):
             self.concluida.emit()
         except Exception as e:
             self.erro.emit(str(e))
+            
+class CarregarHistorico(QThread):
+    carregado = Signal(list)
+    erro = Signal(str)
+
+    def __init__(self, historico):
+        super().__init__()
+        self.historico = historico
+
+    def run(self):
+        try:
+            self.carregado.emit(self.historico.carregar())
+        except Exception as e:
+            self.erro.emit(str(e))

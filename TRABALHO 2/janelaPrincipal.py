@@ -9,9 +9,8 @@ from PySide6.QtCore import Qt
 from models import Filme, ALUGADO, DISPONIVEL
 from repositorio import RepositorioFilmes
 from historicoAlgueis import historico
-from dialogos import JanelaAlugar
-from dialogos import JanelaCadastro
-from tarefas_arquivo import GravarDados
+from dialogos import JanelaAlugar, JanelaCadastro, JanelaHistorico
+from tarefas_arquivo import GravarDados, CarregarHistorico
 
 
 class Janela(QMainWindow):
@@ -70,6 +69,10 @@ class Janela(QMainWindow):
             self.barra.addAction(self.acaoAlugar)
             self.barra.addAction(self.acaoDevolver)
 
+        self.acaoHistorico = QAction("Ver Histórico", self)
+        self.acaoHistorico.triggered.connect(self.abrir_historico)
+        self.menuFilme.addAction(self.acaoHistorico)
+        self.barra.addAction(self.acaoHistorico)
 
         self.input = QLineEdit()
         self.input.setPlaceholderText("Buscar filme...")
@@ -79,7 +82,6 @@ class Janela(QMainWindow):
         self.botao.clicked.connect(self.buscar_filme)
 
         self.lista = QListWidget()
-
 
         self.textoLocadora = QLabel("Locadora de Filmes")
         self.layoutPrincipal = QVBoxLayout()
@@ -174,8 +176,7 @@ class Janela(QMainWindow):
         dialog = JanelaAlugar(filme.titulo, filme.genero)
         if dialog.exec() == QDialog.Accepted:
             filme.status = ALUGADO
-            self.repositorio.salvar(self.filmes)
-            self.historico.registrar(self.login, filme.titulo, "Aluguel")
+            self.salvar_em_segundo_plano((self.login, filme.titulo, "Aluguel"))
             self.atualizar_lista()
             QMessageBox.information(self, "Sucesso", f"'{filme.titulo}' alugado com sucesso!")
 
@@ -192,14 +193,15 @@ class Janela(QMainWindow):
         resposta = QMessageBox.question(self, "Confirmar devolução", f"Devolver '{filme.titulo}'?")
         if resposta == QMessageBox.Yes:
             filme.status = DISPONIVEL
-            self.repositorio.salvar(self.filmes)
-            self.historico.registrar(self.login, filme.titulo, "Devolução")
+            self.salvar_em_segundo_plano((self.login, filme.titulo, "Devolução"))
             self.atualizar_lista()
             QMessageBox.information(self, "Sucesso", f"'{filme.titulo}' devolvido com sucesso!")
 
     def closeEvent(self, event):
         resposta = QMessageBox.question(self, "Sair", "Deseja realmente sair da locadora?")
         if resposta == QMessageBox.Yes:
+            for t in list(self.tarefas):
+                t.wait()
             event.accept()
         else:
             event.ignore()
@@ -211,6 +213,20 @@ class Janela(QMainWindow):
     def salvar_em_segundo_plano(self, registro=None):
         tarefa = GravarDados(self.repositorio, self.filmes, self.historico, registro)
         tarefa.erro.connect(lambda msg: QMessageBox.critical(self, "Erro ao salvar", msg))
-        tarefa.finished.connect(lambda t=tarefa: self.tarefas.remove(t))
+        tarefa.finished.connect(lambda t=tarefa: self.tarefas.remove(t) if t in self.tarefas else None)
         self.tarefas.append(tarefa)
         tarefa.start()
+        
+    def abrir_historico(self):
+        self.dialogHistorico = JanelaHistorico()
+        tarefa = CarregarHistorico(self.historico)
+        tarefa.carregado.connect(self.mostrar_historico)
+        tarefa.finished.connect(lambda t=tarefa: self.tarefas.remove(t) if t in self.tarefas else None)
+        self.tarefas.append(tarefa)
+        tarefa.start()
+        self.dialogHistorico.exec()
+
+    def mostrar_historico(self, registros):
+        if self.tipo_usuario != "Admin":
+            registros = [r for r in registros if r["usuario"] == self.login]
+        self.dialogHistorico.preencher(registros)
