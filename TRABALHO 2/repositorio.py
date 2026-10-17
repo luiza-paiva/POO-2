@@ -2,6 +2,7 @@
 
 import json
 import os
+import threading
 from pathlib import Path
 
 from models import Filme, DISPONIVEL
@@ -31,6 +32,7 @@ class RepositorioFilmes:
 
     def __init__(self, caminho: Path | None = None):
         self.caminho = Path(caminho) if caminho else PASTA_DADOS / "filmes.json"
+        self._trava = threading.Lock()
 
     def carregar(self) -> list[Filme]:
         if not self.caminho.exists():
@@ -48,12 +50,13 @@ class RepositorioFilmes:
             return filmes
 
     def salvar(self, filmes: list[Filme]) -> None:
-        self.caminho.parent.mkdir(parents=True, exist_ok=True)
-        temporario = self.caminho.with_suffix(".json.tmp")
-        with open(temporario, "w", encoding="utf-8") as f:
-            json.dump([f_.to_dict() for f_ in filmes], f,
-                      ensure_ascii=False, indent=2)
-        os.replace(temporario, self.caminho)
+        with self._trava:
+            self.caminho.parent.mkdir(parents=True, exist_ok=True)
+            temporario = self.caminho.with_suffix(".json.tmp")
+            with open(temporario, "w", encoding="utf-8") as f:
+                json.dump([f_.to_dict() for f_ in filmes], f,
+                          ensure_ascii=False, indent=2)
+            os.replace(temporario, self.caminho)
 
     @staticmethod
     def _filmes_iniciais() -> list[Filme]:

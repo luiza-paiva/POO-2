@@ -9,6 +9,7 @@ from PySide6.QtCore import Qt
 from models import Filme
 from repositorio import RepositorioFilmes
 
+
 class JanelaAlugar(QDialog):
     def __init__(self, titulo_filme="", genero_filme=""):
         super().__init__()
@@ -55,3 +56,23 @@ class JanelaCadastro(QDialog):
     def closeEvent(self, event):
         print("Janela de cadastro fechada")
         event.accept()
+
+class JanelaHistorico(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Histórico de Aluguéis")
+        self.resize(500, 400)
+
+        self.textoHistorico = QLabel("Carregando...")
+        self.lista = QListWidget()
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.textoHistorico)
+        layout.addWidget(self.lista)
+        self.setLayout(layout)
+
+    def preencher(self, registros):
+        self.lista.clear()
+        for r in registros:
+            self.lista.addItem(f"{r['data_hora']} - {r['usuario']} - {r['filme']} - {r['acao']}")
+        self.textoHistorico.setText(f"{len(registros)} registro(s)")

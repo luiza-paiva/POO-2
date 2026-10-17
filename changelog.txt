@@ -1,5 +1,7 @@
 Changelog - Locadora de Filmes 
-Integrantes: Victor Hugo da Silva Ferreira, Luiza Oliveira Paiva e Samuel de Carvalho Rodrigues3
+Integrantes: Victor Hugo da Silva Ferreira, Luiza Oliveira Paiva e Samuel de Carvalho Rodrigues
+-----------------------------------------------------------------------------------------------
+ENTREGA PARCIAL 01
 
 Adicionado - Arquivos
 - Persistência do catálogo de filmes em dados/filmes.json
@@ -17,3 +19,19 @@ Adicionado - Threads
 Adicionado - Interface
 - A janela principal passa a receber o login do usuário, usado no
   registro do histórico.
+
+------------------------------------------------------------------------------------------------
+ENTREGA PARCIAL 02
+
+Adicionado 
+- Classe CarregarHistorico (tarefas_arquivo.py): thread que lê o
+  histórico CSV sem travar a interface.
+- Classe JanelaHistorico (dialogos.py): lista com o histórico de
+  aluguéis e devoluções. Admin vê todos; Usuário vê só os seus.
+- Ação "Ver Histórico" na janela principal.
+
+Alterado
+- Aluguel e devolução passam a gravar o catálogo e o histórico em
+  thread (salvar_em_segundo_plano).
+- closeEvent aguarda as threads terminarem antes de fechar.
+- RepositorioFilmes.salvar protegido por threading.Lock.
