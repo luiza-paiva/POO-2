@@ -76,3 +76,25 @@ class JanelaHistorico(QDialog):
         for r in registros:
             self.lista.addItem(f"{r['data_hora']} - {r['usuario']} - {r['filme']} - {r['acao']}")
         self.textoHistorico.setText(f"{len(registros)} registro(s)")
+
+class JanelaCadastroUsuario(QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Cadastrar Usuario")
+        self.resize(300, 150)
+
+        self.login = QLineEdit()
+        self.senha = QLineEdit()
+        self.senha.setEchoMode(QLineEdit.Password)
+        self.sonfirmarSenha = QLineEdit()
+        self.confirmarSenha.setEchoMode(QLineEdit.Password)
+
+        self.salvar = QPushButton("Salvar")
+        self.salvar.clicked.connect(self.accept)
+
+        self.layout = QFormLayout()
+        self.layout.addRow("Login:", self.login)
+        self.layout.addRow("Senha:", self.senha)
+        self.layout.addRow("Confirmar senha:", self.confirmarSenha)
+        self.layout.addRow(self.salvar)
+        self.setLayout(self.layout)
