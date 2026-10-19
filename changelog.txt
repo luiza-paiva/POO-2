@@ -29,11 +29,11 @@ Adicionado - Arquivos
 - Classe JanelaHistorico (dialogos.py): lista com o histórico de
   aluguéis e devoluções. Admin vê todos; Usuário vê só os seus.
 - Ação "Ver Histórico" na janela principal.
-- Classe RepositorioUsuarios (repositorio_usuarios.py): guarda os
+- Classe registroUsuarios (registroUsuarios.py): guarda os
   usuários em dados/usuarios.json (login, senha e tipo), com
   cadastro e validação de login. Se o arquivo não existe, é criado
   com um administrador padrão.
-- threading.RLock no RepositorioUsuarios para evitar escrita
+- threading.RLock no registroUsuarios para evitar escrita
   simultânea no arquivo.
 
 Adicionado - Interface
@@ -55,3 +55,23 @@ Alterado
 - O tipo da conta (Admin ou Usuário) passa a vir do cadastro. O
   seletor de tipo foi removido da tela de login.
 - A tela de cadastro cria apenas contas do tipo Usuário.
+
+------------------------------------------------------------------------------------------------
+ENTREGA FINAL
+
+Alterado
+- JanelaCadastroUsuario: corrigido o nome do campo confirmarSenha.
+- JanelaLogin: criação do registroUsuarios e leitura dos campos do
+  diálogo de cadastro de conta.
+- registroUsuarios: o administrador padrão agora é salvo e retornado
+  quando o arquivo de usuários não existe; tipo padronizado como "Admin".
+- ExportarHistorico: corrigida a indentação (a classe estava dentro de
+  CarregarHistorico).
+
+Adicionado - Interface
+- Ação "Exportar Histórico" para o Admin, com escolha do arquivo .txt.
+- Ação "Sair da conta", que volta à tela de login/cadastro.
+- Ícones e nomes nas ações da barra de ferramentas.
+- Atalhos de teclado para as ações (Ctrl+N, Ctrl+E, Ctrl+R, Ctrl+D,
+  Ctrl+H, Ctrl+S, Ctrl+L).
+- Ação "Atalhos" (F1), que lista os atalhos disponíveis.
