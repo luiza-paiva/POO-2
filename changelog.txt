@@ -73,5 +73,6 @@ Adicionado - Interface
 - Ação "Sair da conta", que volta à tela de login/cadastro.
 - Ícones e nomes nas ações da barra de ferramentas.
 - Atalhos de teclado para as ações (Ctrl+N, Ctrl+E, Ctrl+R, Ctrl+D,
-  Ctrl+H, Ctrl+S, Ctrl+L).
+  Ctrl+H, Ctrl+S, Ctrl+L,Ctrl+T).
 - Ação "Atalhos" (F1), que lista os atalhos disponíveis.
+-Tema (Escuro/Claro) para preferencia do usuário.
