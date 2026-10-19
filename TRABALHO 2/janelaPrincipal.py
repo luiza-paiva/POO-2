@@ -2,7 +2,7 @@ import sys
 from PySide6.QtWidgets import (
     QWidget, QApplication, QMainWindow, QToolBar, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QDialog,
-    QFormLayout, QComboBox, QMessageBox, QFormLayout, QComboBox, QMessageBox, QFileDialog
+    QFormLayout, QComboBox, QMessageBox, QFormLayout, QComboBox, QMessageBox, QFileDialog, QStyle
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
@@ -34,12 +34,17 @@ class Janela(QMainWindow):
 
         self.menuFilme = self.menuBar().addMenu("Filme")
         self.barra = QToolBar()
+        self.barra.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.addToolBar(self.barra)
 
         if self.tipo_usuario == "Admin":
             self.acaoCadastrar = QAction("Cadastrar Filme", self)
             self.acaoEditar = QAction("Editar Filme", self)
             self.acaoExcluir = QAction("Excluir Filme", self)
+
+            self.acaoCadastrar.setIcon(self.style().standardIcon(QStyle.SP_FileDialogNewFolder))
+            self.acaoEditar.setIcon(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+            self.acaoExcluir.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
 
             self.acaoCadastrar.triggered.connect(self.cadastrar_filme)
             self.acaoEditar.triggered.connect(self.editar_filme)
@@ -62,6 +67,8 @@ class Janela(QMainWindow):
             self.acaoAlugar.triggered.connect(self.abrir_alugar)
 
             self.acaoDevolver = QAction("Devolver Filme", self)
+            self.acaoAlugar.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+            self.acaoDevolver.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
             self.acaoDevolver.triggered.connect(self.devolver_filme)
 
             self.menuFilme.addAction(self.acaoAlugar)
@@ -71,15 +78,23 @@ class Janela(QMainWindow):
             self.barra.addAction(self.acaoDevolver)
 
         self.acaoHistorico = QAction("Ver Histórico", self)
+        self.acaoHistorico.setIcon(self.style().standardIcon(QStyle.SP_FileDialogContentsView))
         self.acaoHistorico.triggered.connect(self.abrir_historico)
         self.menuFilme.addAction(self.acaoHistorico)
         self.barra.addAction(self.acaoHistorico)
 
         if self.tipo_usuario == "Admin":
             self.acaoExportar = QAction("Exportar Histórico", self)
+            self.acaoExportar.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
             self.acaoExportar.triggered.connect(self.exportar_historico)
             self.menuFilme.addAction(self.acaoExportar)
             self.barra.addAction(self.acaoExportar)
+
+        self.acaoSair = QAction("Sair da conta", self)
+        self.acaoSair.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
+        self.acaoSair.triggered.connect(self.sair_da_conta)
+        self.menuFilme.addAction(self.acaoSair)
+        self.barra.addAction(self.acaoSair)
 
         self.input = QLineEdit()
         self.input.setPlaceholderText("Buscar filme...")
@@ -261,3 +276,10 @@ class Janela(QMainWindow):
         tarefa = self.sender()
         if tarefa in self.tarefas:
             self.tarefas.remove(tarefa)
+
+    def sair_da_conta(self):
+        from janelaLogin import JanelaLogin
+        self.janelaLogin = JanelaLogin()
+        self.janelaLogin.show()
+        if not self.close():
+            self.janelaLogin.close()
