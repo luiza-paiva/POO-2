@@ -42,6 +42,9 @@ class Janela(QMainWindow):
             self.acaoEditar = QAction("Editar Filme", self)
             self.acaoExcluir = QAction("Excluir Filme", self)
 
+            self.acaoCadastrar.setShortcut("Ctrl+N")
+            self.acaoEditar.setShortcut("Ctrl+E")
+
             self.acaoCadastrar.setIcon(self.style().standardIcon(QStyle.SP_FileDialogNewFolder))
             self.acaoEditar.setIcon(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
             self.acaoExcluir.setIcon(self.style().standardIcon(QStyle.SP_TrashIcon))
@@ -58,11 +61,7 @@ class Janela(QMainWindow):
             self.barra.addAction(self.acaoEditar)
             self.barra.addAction(self.acaoExcluir)
 
-
-
-
         else:
-
             self.acaoAlugar = QAction("Alugar Filme", self)
             self.acaoAlugar.triggered.connect(self.abrir_alugar)
 
@@ -71,6 +70,9 @@ class Janela(QMainWindow):
             self.acaoDevolver.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
             self.acaoDevolver.triggered.connect(self.devolver_filme)
 
+            self.acaoAlugar.setShortcut("Ctrl+R")
+            self.acaoDevolver.setShortcut("Ctrl+D")
+
             self.menuFilme.addAction(self.acaoAlugar)
             self.menuFilme.addAction(self.acaoDevolver)
 
@@ -78,6 +80,7 @@ class Janela(QMainWindow):
             self.barra.addAction(self.acaoDevolver)
 
         self.acaoHistorico = QAction("Ver Histórico", self)
+        self.acaoHistorico.setShortcut("Ctrl+H")
         self.acaoHistorico.setIcon(self.style().standardIcon(QStyle.SP_FileDialogContentsView))
         self.acaoHistorico.triggered.connect(self.abrir_historico)
         self.menuFilme.addAction(self.acaoHistorico)
@@ -86,15 +89,24 @@ class Janela(QMainWindow):
         if self.tipo_usuario == "Admin":
             self.acaoExportar = QAction("Exportar Histórico", self)
             self.acaoExportar.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+            self.acaoExportar.setShortcut("Ctrl+S")
             self.acaoExportar.triggered.connect(self.exportar_historico)
             self.menuFilme.addAction(self.acaoExportar)
             self.barra.addAction(self.acaoExportar)
 
         self.acaoSair = QAction("Sair da conta", self)
         self.acaoSair.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
+        self.acaoSair.setShortcut("Ctrl+L")
         self.acaoSair.triggered.connect(self.sair_da_conta)
         self.menuFilme.addAction(self.acaoSair)
         self.barra.addAction(self.acaoSair)
+
+        self.acaoAtalhos = QAction("Atalhos", self)
+        self.acaoAtalhos.setIcon(self.style().standardIcon(QStyle.SP_MessageBoxQuestion))
+        self.acaoAtalhos.setShortcut("F1")
+        self.acaoAtalhos.triggered.connect(self.mostrar_atalhos)
+        self.menuFilme.addAction(self.acaoAtalhos)
+        self.barra.addAction(self.acaoAtalhos)
 
         self.input = QLineEdit()
         self.input.setPlaceholderText("Buscar filme...")
@@ -283,3 +295,23 @@ class Janela(QMainWindow):
         self.janelaLogin.show()
         if not self.close():
             self.janelaLogin.close()
+
+    def mostrar_atalhos(self):
+        if self.tipo_usuario == "Admin":
+            texto = (
+                "Ctrl+N  -  Cadastrar filme\n"
+                "Ctrl+E  -  Editar filme\n"
+                "Delete  -  Excluir filme\n"
+                "Ctrl+S  -  Exportar histórico\n"
+            )
+        else:
+            texto = (
+                "Ctrl+R  -  Alugar filme\n"
+                "Ctrl+D  -  Devolver filme\n"
+            )
+        texto += (
+            "Ctrl+H  -  Ver histórico\n"
+            "Ctrl+L  -  Sair da conta\n"
+            "F1  -  Mostrar esta lista"
+        )
+        QMessageBox.information(self, "Atalhos de teclado", texto)
