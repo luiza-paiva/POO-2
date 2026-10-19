@@ -58,3 +58,7 @@ def aplicar_tema(escuro: bool) -> None:
     app.setStyle("Fusion")
     app.setPalette(_paleta_escura() if escuro else app.style().standardPalette())
     salvar_preferencia(escuro)
+
+
+def alternar_tema() -> None:
+    aplicar_tema(not carregar_preferencia())

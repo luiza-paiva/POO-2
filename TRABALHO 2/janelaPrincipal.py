@@ -11,6 +11,7 @@ from repositorio import RepositorioFilmes
 from historicoAlgueis import historico
 from dialogos import JanelaAlugar, JanelaCadastro, JanelaHistorico
 from tarefas_arquivo import GravarDados, CarregarHistorico, ExportarHistorico
+import tema
 
 class Janela(QMainWindow):
     def __init__(self, login,tipo_usuario="Usuário"):
@@ -93,6 +94,13 @@ class Janela(QMainWindow):
             self.acaoExportar.triggered.connect(self.exportar_historico)
             self.menuFilme.addAction(self.acaoExportar)
             self.barra.addAction(self.acaoExportar)
+
+        self.acaoTema = QAction("Alternar tema (claro/escuro)", self)
+        self.acaoTema.setIcon(self.style().standardIcon(QStyle.SP_DesktopIcon))
+        self.acaoTema.setShortcut("Ctrl+T")
+        self.acaoTema.triggered.connect(tema.alternar_tema)
+        self.menuFilme.addAction(self.acaoTema)
+        self.barra.addAction(self.acaoTema)
 
         self.acaoSair = QAction("Sair da conta", self)
         self.acaoSair.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
@@ -311,7 +319,8 @@ class Janela(QMainWindow):
             )
         texto += (
             "Ctrl+H  -  Ver histórico\n"
+            "Ctrl+T  -  Alternar tema claro/escuro\n"
             "Ctrl+L  -  Sair da conta\n"
             "F1  -  Mostrar esta lista"
         )
-        QMessageBox.information(self, "Atalhos de teclado", texto)
+        QMessageBox.information(self, "Atalhos de teclado", texto)

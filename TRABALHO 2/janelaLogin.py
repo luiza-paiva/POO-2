@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
 from janelaPrincipal import Janela
 from dialogos import JanelaCadastroUsuario
 from registroUsuarios import registroUsuarios
+import tema
 
 class JanelaLogin(QMainWindow):
     def __init__(self):
@@ -27,6 +28,9 @@ class JanelaLogin(QMainWindow):
         self.cadastrar = QPushButton("Criar conta")
         self.cadastrar.clicked.connect(self.cadastrar_usuario)
 
+        self.botaoTema = QPushButton("Alternar tema (claro/escuro)")
+        self.botaoTema.clicked.connect(tema.alternar_tema)
+
         #self.tipo = QComboBox()
         #self.tipo.addItems(["Usuário", "Admin"])
 
@@ -38,6 +42,7 @@ class JanelaLogin(QMainWindow):
         self.layout.addWidget(self.senha)
         self.layout.addWidget(self.botaoLogin)
         self.layout.addWidget(self.cadastrar)
+        self.layout.addWidget(self.botaoTema)
         self.layout.addStretch()
 
         container = QWidget()

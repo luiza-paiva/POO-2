@@ -1,0 +1,92 @@
+[
+  {
+    "titulo": "O Poderoso Chefão",
+    "genero": "drama",
+    "status": "Alugado",
+    "id": "765a80d9c5cf47c2a81814db08bb0540"
+  },
+  {
+    "titulo": "Pânico",
+    "genero": "terror",
+    "status": "Disponível",
+    "id": "8b40482eabdb468dbf6f582cb26d4211"
+  },
+  {
+    "titulo": "Duna",
+    "genero": "ficção científica",
+    "status": "Disponível",
+    "id": "2479bbb85a684a86ac42b23badfae833"
+  },
+  {
+    "titulo": "Titanic",
+    "genero": "romance",
+    "status": "Disponível",
+    "id": "1f90f9f6b463461ebb8a5c9277f7cbb0"
+  },
+  {
+    "titulo": "Interestelar",
+    "genero": "ficção científica",
+    "status": "Disponível",
+    "id": "92565021aa614bf2bd44787381b4af79"
+  },
+  {
+    "titulo": "John Wick",
+    "genero": "ação",
+    "status": "Disponível",
+    "id": "3837e811bda948b3b8f1e4b6d69810f9"
+  },
+  {
+    "titulo": "Invocação do Mal",
+    "genero": "terror",
+    "status": "Disponível",
+    "id": "1164c6c9909b4f09b960b0bd2d738887"
+  },
+  {
+    "titulo": "Orgulho e Preconceito",
+    "genero": "romance",
+    "status": "Disponível",
+    "id": "f6952efa57e248508be04a2fc71af3fa"
+  },
+  {
+    "titulo": "Clube da Luta",
+    "genero": "drama",
+    "status": "Disponível",
+    "id": "49eb355b242a4c93a49eddd9be18b7b8"
+  },
+  {
+    "titulo": "Mad Max: Estrada da Fúria",
+    "genero": "ação",
+    "status": "Disponível",
+    "id": "a34cb55d45d544fab43fb4f92203b6a4"
+  },
+  {
+    "titulo": "Corra!",
+    "genero": "terror",
+    "status": "Disponível",
+    "id": "eba78a40c02b46aaba66f390bf03a2a2"
+  },
+  {
+    "titulo": "Blade Runner 2049",
+    "genero": "ficção científica",
+    "status": "Disponível",
+    "id": "b0a5d4c55cc142df969e23e24b1ac789"
+  },
+  {
+    "titulo": "Diário de uma Paixão",
+    "genero": "romance",
+    "status": "Disponível",
+    "id": "e2bd0e05ead24f7a96ec9a49b3ea9805"
+  },
+  {
+    "titulo": "Cidade de Deus",
+    "genero": "drama",
+    "status": "Disponível",
+    "id": "46a08ff014e647b6bf03600f01784327"
+  },
+  {
+    "titulo": "Um Sonho de Liberdade",
+    "genero": "drama",
+    "status": "Disponível",
+    "id": "db1c7122e24544c9a7b95627ec1ac51b"
+  }
+]

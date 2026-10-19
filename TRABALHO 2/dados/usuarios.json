@@ -1,0 +1,17 @@
+[
+  {
+    "login": "admin",
+    "senha": "admin",
+    "tipo": "Admin"
+  },
+  {
+    "login": "samuuel",
+    "senha": "123",
+    "tipo": "Usuário"
+  },
+  {
+    "login": "caioportela",
+    "senha": "6969",
+    "tipo": "Usuário"
+  }
+]
