@@ -23,15 +23,35 @@ Adicionado - Interface
 ------------------------------------------------------------------------------------------------
 ENTREGA PARCIAL 02
 
-Adicionado 
+Adicionado - Arquivos
 - Classe CarregarHistorico (tarefas_arquivo.py): thread que lê o
   histórico CSV sem travar a interface.
 - Classe JanelaHistorico (dialogos.py): lista com o histórico de
   aluguéis e devoluções. Admin vê todos; Usuário vê só os seus.
 - Ação "Ver Histórico" na janela principal.
+- Classe RepositorioUsuarios (repositorio_usuarios.py): guarda os
+  usuários em dados/usuarios.json (login, senha e tipo), com
+  cadastro e validação de login. Se o arquivo não existe, é criado
+  com um administrador padrão.
+- threading.RLock no RepositorioUsuarios para evitar escrita
+  simultânea no arquivo.
+
+Adicionado - Interface
+- Classe JanelaCadastroUsuario (dialogos.py): tela de criação de
+  conta, com login, senha e confirmação de senha.
+- Botão "Criar conta" na tela de login.
+
+Adicionado - Threads
+- Classe ExportarHistorico (tarefas_arquivo.py): thread que grava o
+  histórico em um arquivo .txt sem travar a interface.
 
 Alterado
 - Aluguel e devolução passam a gravar o catálogo e o histórico em
   thread (salvar_em_segundo_plano).
 - closeEvent aguarda as threads terminarem antes de fechar.
 - RepositorioFilmes.salvar protegido por threading.Lock.
+- JanelaLogin: o login agora é validado em usuarios.json. Antes,
+  qualquer login e senha eram aceitos.
+- O tipo da conta (Admin ou Usuário) passa a vir do cadastro. O
+  seletor de tipo foi removido da tela de login.
+- A tela de cadastro cria apenas contas do tipo Usuário.

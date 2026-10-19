@@ -86,7 +86,7 @@ class JanelaCadastroUsuario(QDialog):
         self.login = QLineEdit()
         self.senha = QLineEdit()
         self.senha.setEchoMode(QLineEdit.Password)
-        self.sonfirmarSenha = QLineEdit()
+        self.confirmarSenha = QLineEdit()
         self.confirmarSenha.setEchoMode(QLineEdit.Password)
 
         self.salvar = QPushButton("Salvar")

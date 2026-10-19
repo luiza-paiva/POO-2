@@ -11,6 +11,7 @@ class JanelaLogin(QMainWindow):
         super().__init__()
         self.setWindowTitle("Login")
         self.resize(350, 200)
+        self.registroUsuarios = registroUsuarios(None)
 
         self.login = QLineEdit()
         self.login.setPlaceholderText("Login")
@@ -51,7 +52,7 @@ class JanelaLogin(QMainWindow):
             QMessageBox.warning(self, "Aviso", "Preencha login e senha.")
             return
 
-        tipo = self.repositorioUsuarios.validar(login, senha)
+        tipo = self.registroUsuarios.validar(login, senha)
         if tipo is None:
             QMessageBox.warning(self, "Erro", "Login ou senha inválidos.")
             return
@@ -65,9 +66,9 @@ class JanelaLogin(QMainWindow):
         if dialogo.exec() != QDialog.Accepted:
             return
 
-        login = self.login.text().strip()
-        senha = self.senha.text().strip()
-        confirmar = self.confirmar.text().strip()
+        login = dialogo.login.text().strip()
+        senha = dialogo.senha.text().strip()
+        confirmar = dialogo.confirmarSenha.text().strip()
 
         if not login or not senha:
             QMessageBox.warning(self, "Aviso", "Preencha login e senha.")

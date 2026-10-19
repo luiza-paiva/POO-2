@@ -4,7 +4,7 @@ from pathlib import Path
 from repositorio import PASTA_DADOS
 
 class registroUsuarios:
-    def __init__(self, caminho: Path):
+    def __init__(self, caminho: Path | None = None):
         self.caminho = Path(caminho) if caminho else PASTA_DADOS / "usuarios.json"
         self._trava = threading.RLock()
 
@@ -13,8 +13,10 @@ class registroUsuarios:
             usuarios = [{
                 "login": "admin",
                 "senha": "admin",
-                "tipo": "admin"
+                "tipo": "Admin"
             }]
+            self._salvar(usuarios)
+            return usuarios
 
         try:
             with open(self.caminho, "r", encoding="utf-8") as arquivo:
@@ -45,6 +47,3 @@ class registroUsuarios:
             if(u["login"] == login and u["senha"] == senha):
                 return u["tipo"]
         return  None
-
-
-

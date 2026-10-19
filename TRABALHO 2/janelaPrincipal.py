@@ -2,7 +2,7 @@ import sys
 from PySide6.QtWidgets import (
     QWidget, QApplication, QMainWindow, QToolBar, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QDialog,
-    QFormLayout, QComboBox, QMessageBox
+    QFormLayout, QComboBox, QMessageBox, QFormLayout, QComboBox, QMessageBox, QFileDialog
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
@@ -10,8 +10,7 @@ from models import Filme, ALUGADO, DISPONIVEL
 from repositorio import RepositorioFilmes
 from historicoAlgueis import historico
 from dialogos import JanelaAlugar, JanelaCadastro, JanelaHistorico
-from tarefas_arquivo import GravarDados, CarregarHistorico
-
+from tarefas_arquivo import GravarDados, CarregarHistorico, ExportarHistorico
 
 class Janela(QMainWindow):
     def __init__(self, login,tipo_usuario="Usuário"):
@@ -55,6 +54,8 @@ class Janela(QMainWindow):
             self.barra.addAction(self.acaoExcluir)
 
 
+
+
         else:
 
             self.acaoAlugar = QAction("Alugar Filme", self)
@@ -73,6 +74,12 @@ class Janela(QMainWindow):
         self.acaoHistorico.triggered.connect(self.abrir_historico)
         self.menuFilme.addAction(self.acaoHistorico)
         self.barra.addAction(self.acaoHistorico)
+
+        if self.tipo_usuario == "Admin":
+            self.acaoExportar = QAction("Exportar Histórico", self)
+            self.acaoExportar.triggered.connect(self.exportar_historico)
+            self.menuFilme.addAction(self.acaoExportar)
+            self.barra.addAction(self.acaoExportar)
 
         self.input = QLineEdit()
         self.input.setPlaceholderText("Buscar filme...")
@@ -230,3 +237,27 @@ class Janela(QMainWindow):
         if self.tipo_usuario != "Admin":
             registros = [r for r in registros if r["usuario"] == self.login]
         self.dialogHistorico.preencher(registros)
+
+    def exportar_historico(self):
+        caminho, _ = QFileDialog.getSaveFileName(
+            self, "Exportar histórico", "historico.txt", "Arquivos de texto (*.txt)"
+        )
+        if not caminho:
+            return
+        tarefa = ExportarHistorico(self.historico.carregar(), caminho)
+        tarefa.exportado.connect(self.exportacao_concluida)
+        tarefa.erro.connect(self.exportacao_erro)
+        tarefa.finished.connect(self.exportacao_finalizada)
+        self.tarefas.append(tarefa)
+        tarefa.start()
+
+    def exportacao_concluida(self, caminho):
+        QMessageBox.information(self, "Sucesso", f"Histórico exportado em:\n{caminho}")
+
+    def exportacao_erro(self, mensagem):
+        QMessageBox.critical(self, "Erro ao exportar", mensagem)
+
+    def exportacao_finalizada(self):
+        tarefa = self.sender()
+        if tarefa in self.tarefas:
+            self.tarefas.remove(tarefa)
