@@ -5,7 +5,7 @@ import os
 import threading
 from pathlib import Path
 
-from models import Filme, DISPONIVEL
+from models import Filme, Avaliacao, DISPONIVEL
 
 PASTA_DADOS = Path(__file__).resolve().parent / "dados"
 
@@ -61,3 +61,26 @@ class RepositorioFilmes:
     @staticmethod
     def _filmes_iniciais() -> list[Filme]:
         return [Filme(t, g, DISPONIVEL) for t, g in FILMES_INICIAIS]
+
+
+class RepositorioAvaliacoes:
+
+    def __init__(self, caminho: Path | None = None):
+        self.caminho = Path(caminho) if caminho else PASTA_DADOS / "avaliacoes.json"
+        self._trava = threading.Lock()
+
+    def carregar(self) -> list[Avaliacao]:
+        try:
+            with open(self.caminho, "r", encoding="utf-8") as f:
+                return [Avaliacao.from_dict(d) for d in json.load(f)]
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError):
+            return []
+
+    def salvar(self, avaliacoes: list[Avaliacao]) -> None:
+        with self._trava:
+            self.caminho.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self.caminho.with_suffix(".json.tmp")
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump([a.to_dict() for a in avaliacoes], f,
+                          ensure_ascii=False, indent=2)
+            os.replace(tmp, self.caminho)

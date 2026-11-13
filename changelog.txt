@@ -68,6 +68,8 @@ Alterado
 - ExportarHistorico: corrigida a indentação (a classe estava dentro de
   CarregarHistorico).
 
+
+
 Adicionado - Interface
 - Ação "Exportar Histórico" para o Admin, com escolha do arquivo .txt.
 - Ação "Sair da conta", que volta à tela de login/cadastro.

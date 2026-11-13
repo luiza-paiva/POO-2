@@ -2,7 +2,7 @@ import sys
 from PySide6.QtWidgets import (
     QWidget, QApplication, QMainWindow, QToolBar, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QDialog,
-    QFormLayout, QComboBox, QMessageBox
+    QFormLayout, QComboBox, QMessageBox, QSpinBox, QPlainTextEdit
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
@@ -98,3 +98,31 @@ class JanelaCadastroUsuario(QDialog):
         self.layout.addRow("Confirmar senha:", self.confirmarSenha)
         self.layout.addRow(self.salvar)
         self.setLayout(self.layout)
+
+
+class JanelaAvaliar(QDialog):
+    def __init__(self, titulo_filme, nota=5, comentario=""):
+        super().__init__()
+        self.setWindowTitle("Avaliar Filme")
+        self.resize(350, 250)
+
+        self.campoFilme = QLineEdit(titulo_filme)
+        self.campoFilme.setEnabled(False)
+
+        self.campoNota = QSpinBox()
+        self.campoNota.setRange(1, 5)
+        self.campoNota.setValue(nota)
+        self.campoNota.setSuffix(" ★")
+
+        self.campoComentario = QPlainTextEdit(comentario)
+        self.campoComentario.setPlaceholderText("Comentário (opcional)")
+
+        self.botaoSalvar = QPushButton("Salvar avaliação")
+        self.botaoSalvar.clicked.connect(self.accept)
+
+        layout = QFormLayout()
+        layout.addRow("Filme:", self.campoFilme)
+        layout.addRow("Nota:", self.campoNota)
+        layout.addRow("Comentário:", self.campoComentario)
+        layout.addRow(self.botaoSalvar)
+        self.setLayout(layout)

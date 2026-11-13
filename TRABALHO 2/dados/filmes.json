@@ -3,7 +3,9 @@
     "titulo": "O Poderoso Chefão",
     "genero": "drama",
     "status": "Alugado",
-    "id": "765a80d9c5cf47c2a81814db08bb0540"
+    "id": "765a80d9c5cf47c2a81814db08bb0540",
+    "alugado_por": "samuuel",
+    "data_aluguel": "19/10/2026 17:43:33"
   },
   {
     "titulo": "Pânico",

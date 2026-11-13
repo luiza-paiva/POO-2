@@ -53,3 +53,18 @@ class ExportarHistorico(QThread):
             self.exportado.emit(self.caminho)
         except Exception as e:
             self.erro.emit(str(e))
+
+
+class GravarAvaliacoes(QThread):
+    erro = Signal(str)
+
+    def __init__(self, repositorio, avaliacoes):
+        super().__init__()
+        self.repositorio = repositorio
+        self.avaliacoes = list(avaliacoes)
+
+    def run(self):
+        try:
+            self.repositorio.salvar(self.avaliacoes)
+        except Exception as e:
+            self.erro.emit(str(e))
