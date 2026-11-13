@@ -1,0 +1,18 @@
+TRABALHO 3
+
+Primeira entrega parcial
+------------------------------------------------------------
+Alterado
+- janelaLogin.py: nova tela de login, com bloco centralizado, icone,
+  titulo, campos arredondados e botoes estilizados.
+- janelaLogin.py: estilo proprio (QSS) com cores para o tema claro e
+  para o tema escuro, reaplicado ao alternar o tema.
+- tema.py: o tema claro passou a usar uma paleta propria
+  (_paleta_clara), sem depender do estilo padrao do sistema.
+- tema.py: o esquema de cor do Qt (claro/escuro) e informado ao
+  alternar o tema.
+
+Adicionado
+- janelaLogin.py: opcao "Mostrar senha".
+- janelaLogin.py: Enter no campo de login passa o foco para a senha.
+- janelaLogin.py: metodos aplicar_estilo, alternar_tema e alternar_senha.
