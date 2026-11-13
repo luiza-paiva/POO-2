@@ -67,6 +67,32 @@ Alterado
   quando o arquivo de usuários não existe; tipo padronizado como "Admin".
 - ExportarHistorico: corrigida a indentação (a classe estava dentro de
   CarregarHistorico).
+- Filme (models.py): novos campos alugado_por e data_aluguel. O from_dict
+  lê os campos com .get, então o filmes.json antigo continua carregando.
+- Janela.abrir_alugar: grava o login de quem alugou e a data/hora do
+  aluguel.
+- Janela.devolver_filme: só quem alugou o filme pode devolvê-lo; ao
+  devolver, os campos alugado_por e data_aluguel são limpos.
+- Janela.excluir_filme: ao excluir um filme, as avaliações dele também
+  são removidas.
+- Janela.atualizar_lista: exibe a média e a quantidade de avaliações de
+  cada filme e mantém o filme selecionado após alugar, devolver ou
+  recarregar a lista.
+- Janela.mostrar_atalhos: inclui o atalho Ctrl+B (Avaliar filme).
+
+Adicionado - Regras de negócio
+- Controle de quem alugou cada filme (validação na devolução).
+- Sistema de avaliações: nota de 1 a 5 e comentário opcional, apenas
+  para filmes que o usuário já alugou, com uma avaliação por usuário e
+  filme (avaliar de novo atualiza a anterior).
+
+Adicionado - Código
+- Avaliacao (models.py): modelo de dados da avaliação.
+- RepositorioAvaliacoes (repositorio.py): leitura e gravação das
+  avaliações em dados/avaliacoes.json.
+- GravarAvaliacoes (tarefas_arquivo.py): QThread que grava as avaliações
+  em segundo plano.
+- JanelaAvaliar (dialogos.py): diálogo para escolher nota e comentário.
 
 Adicionado - Interface
 - Ação "Exportar Histórico" para o Admin, com escolha do arquivo .txt.
@@ -76,3 +102,6 @@ Adicionado - Interface
   Ctrl+H, Ctrl+S, Ctrl+L,Ctrl+T).
 - Ação "Atalhos" (F1), que lista os atalhos disponíveis.
 -Tema (Escuro/Claro) para preferencia do usuário.
+- Ação "Avaliar Filme" para usuários comuns (menu, barra de ferramentas
+  e atalho Ctrl+B).
+- Média de avaliações exibida na lista de filmes.

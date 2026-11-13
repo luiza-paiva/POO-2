@@ -1,4 +1,5 @@
 import sys
+from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QApplication, QMainWindow, QToolBar, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QDialog,
@@ -6,11 +7,11 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
-from models import Filme, ALUGADO, DISPONIVEL
-from repositorio import RepositorioFilmes
+from models import Filme, Avaliacao, ALUGADO, DISPONIVEL
+from repositorio import RepositorioFilmes, RepositorioAvaliacoes
 from historicoAlgueis import historico
-from dialogos import JanelaAlugar, JanelaCadastro, JanelaHistorico
-from tarefas_arquivo import GravarDados, CarregarHistorico, ExportarHistorico
+from dialogos import JanelaAlugar, JanelaCadastro, JanelaHistorico, JanelaAvaliar
+from tarefas_arquivo import GravarDados, CarregarHistorico, ExportarHistorico, GravarAvaliacoes
 import tema
 
 class Janela(QMainWindow):
@@ -24,6 +25,8 @@ class Janela(QMainWindow):
         self.repositorio = RepositorioFilmes()
         self.historico = historico()
         self.filmes = self.repositorio.carregar()
+        self.repoAvaliacoes = RepositorioAvaliacoes()
+        self.avaliacoes = self.repoAvaliacoes.carregar()
         self.tarefas = []
 
         self.menuGenero = self.menuBar().addMenu("Gênero")
@@ -71,14 +74,21 @@ class Janela(QMainWindow):
             self.acaoDevolver.setIcon(self.style().standardIcon(QStyle.SP_BrowserReload))
             self.acaoDevolver.triggered.connect(self.devolver_filme)
 
+            self.acaoAvaliar = QAction("Avaliar Filme", self)
+            self.acaoAvaliar.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+            self.acaoAvaliar.setShortcut("Ctrl+B")
+            self.acaoAvaliar.triggered.connect(self.avaliar_filme)
+
             self.acaoAlugar.setShortcut("Ctrl+R")
             self.acaoDevolver.setShortcut("Ctrl+D")
 
             self.menuFilme.addAction(self.acaoAlugar)
             self.menuFilme.addAction(self.acaoDevolver)
+            self.menuFilme.addAction(self.acaoAvaliar)
 
             self.barra.addAction(self.acaoAlugar)
             self.barra.addAction(self.acaoDevolver)
+            self.barra.addAction(self.acaoAvaliar)
 
         self.acaoHistorico = QAction("Ver Histórico", self)
         self.acaoHistorico.setShortcut("Ctrl+H")
@@ -139,11 +149,19 @@ class Janela(QMainWindow):
         self.atualizar_lista()
 
     def atualizar_lista(self, filmes=None):
+        atual = self.lista.currentItem()
+        id_selecionado = atual.data(Qt.UserRole) if atual else None
         self.lista.clear()
         for filme in (filmes if filmes is not None else self.filmes):
-            item = QListWidgetItem(str(filme))
+            texto = str(filme)
+            notas = [a.nota for a in self.avaliacoes if a.filme_id == filme.id]
+            if notas:
+                texto += f"  ★ {sum(notas)/len(notas):.1f} ({len(notas)})"
+            item = QListWidgetItem(texto)
             item.setData(Qt.UserRole, filme.id)
             self.lista.addItem(item)
+            if filme.id == id_selecionado:
+                self.lista.setCurrentItem(item)
 
     def filtrar_por_genero(self, genero):
         filtrados = [f for f in self.filmes if f.genero == genero]
@@ -202,6 +220,8 @@ class Janela(QMainWindow):
         )
         if resposta == QMessageBox.Yes:
             self.filmes.remove(filme)
+            self.avaliacoes = [a for a in self.avaliacoes if a.filme_id != filme.id]
+            self.salvar_avaliacoes_em_segundo_plano()
             self.salvar_em_segundo_plano() 
             self.atualizar_lista()
 
@@ -218,6 +238,8 @@ class Janela(QMainWindow):
         dialog = JanelaAlugar(filme.titulo, filme.genero)
         if dialog.exec() == QDialog.Accepted:
             filme.status = ALUGADO
+            filme.alugado_por = self.login
+            filme.data_aluguel = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
             self.salvar_em_segundo_plano((self.login, filme.titulo, "Aluguel"))
             self.atualizar_lista()
             QMessageBox.information(self, "Sucesso", f"'{filme.titulo}' alugado com sucesso!")
@@ -232,12 +254,64 @@ class Janela(QMainWindow):
             QMessageBox.warning(self, "Aviso", f"'{filme.titulo}' não está alugado.")
             return
 
+        if filme.alugado_por and filme.alugado_por != self.login:
+            QMessageBox.warning(self, "Não permitido",
+                                f"'{filme.titulo}' foi alugado por outro usuário.")
+            return
+
         resposta = QMessageBox.question(self, "Confirmar devolução", f"Devolver '{filme.titulo}'?")
         if resposta == QMessageBox.Yes:
             filme.status = DISPONIVEL
+            filme.alugado_por = ""
+            filme.data_aluguel = ""
             self.salvar_em_segundo_plano((self.login, filme.titulo, "Devolução"))
             self.atualizar_lista()
             QMessageBox.information(self, "Sucesso", f"'{filme.titulo}' devolvido com sucesso!")
+
+    def avaliar_filme(self):
+        filme = self.filme_selecionado()
+        if filme is None:
+            QMessageBox.warning(self, "Aviso", "Selecione um filme para avaliar.")
+            return
+
+        
+        alugou = any(
+            r["usuario"] == self.login and r["filme"] == filme.titulo and r["acao"] == "Aluguel"
+            for r in self.historico.carregar()
+        )
+        if not alugou:
+            QMessageBox.warning(self, "Não permitido", "Você só pode avaliar filmes que já alugou.")
+            return
+
+        existente = next((a for a in self.avaliacoes
+                          if a.filme_id == filme.id and a.usuario == self.login), None)
+
+        dialog = JanelaAvaliar(filme.titulo,
+                               existente.nota if existente else 5,
+                               existente.comentario if existente else "")
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        nota = dialog.campoNota.value()
+        comentario = dialog.campoComentario.toPlainText().strip()
+        agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+        if existente: 
+            existente.nota = nota
+            existente.comentario = comentario
+            existente.data_hora = agora
+        else:
+            self.avaliacoes.append(Avaliacao(filme.id, self.login, nota, comentario, agora))
+
+        self.salvar_avaliacoes_em_segundo_plano()
+        self.atualizar_lista()
+
+    def salvar_avaliacoes_em_segundo_plano(self):
+        tarefa = GravarAvaliacoes(self.repoAvaliacoes, self.avaliacoes)
+        tarefa.erro.connect(lambda msg: QMessageBox.critical(self, "Erro ao salvar", msg))
+        tarefa.finished.connect(lambda t=tarefa: self.tarefas.remove(t) if t in self.tarefas else None)
+        self.tarefas.append(tarefa)
+        tarefa.start()
 
     def closeEvent(self, event):
         resposta = QMessageBox.question(self, "Sair", "Deseja realmente sair da locadora?")
@@ -316,6 +390,7 @@ class Janela(QMainWindow):
             texto = (
                 "Ctrl+R  -  Alugar filme\n"
                 "Ctrl+D  -  Devolver filme\n"
+                "Ctrl+B  -  Avaliar filme\n"
             )
         texto += (
             "Ctrl+H  -  Ver histórico\n"
@@ -323,4 +398,4 @@ class Janela(QMainWindow):
             "Ctrl+L  -  Sair da conta\n"
             "F1  -  Mostrar esta lista"
         )
-        QMessageBox.information(self, "Atalhos de teclado", texto)
+        QMessageBox.information(self, "Atalhos de teclado", texto)
