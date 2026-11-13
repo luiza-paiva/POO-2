@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import QApplication
 
@@ -23,8 +24,7 @@ def salvar_preferencia(escuro: bool, caminho: Path = CAMINHO_CONFIG) -> None:
         with open(caminho, "w", encoding="utf-8") as f:
             json.dump({"tema": "escuro" if escuro else "claro"}, f, indent=2)
     except OSError:
-        pass  
-
+        pass
 
 def _paleta_escura() -> QPalette:
     p = QPalette()
@@ -53,12 +53,42 @@ def _paleta_escura() -> QPalette:
     return p
 
 
-def aplicar_tema(escuro: bool) -> None:
-    app = QApplication.instance()
-    app.setStyle("Fusion")
-    app.setPalette(_paleta_escura() if escuro else app.style().standardPalette())
-    salvar_preferencia(escuro)
+def _paleta_clara() -> QPalette:
+    p = QPalette()
+    fundo = QColor(245, 245, 245)
+    base = QColor(255, 255, 255)
+    texto = QColor(26, 26, 26)
+    destaque = QColor(42, 130, 218)
+    desabilitado = QColor(140, 140, 140)
+
+    p.setColor(QPalette.Window, fundo)
+    p.setColor(QPalette.WindowText, texto)
+    p.setColor(QPalette.Base, base)
+    p.setColor(QPalette.AlternateBase, QColor(238, 238, 238))
+    p.setColor(QPalette.ToolTipBase, base)
+    p.setColor(QPalette.ToolTipText, texto)
+    p.setColor(QPalette.Text, texto)
+    p.setColor(QPalette.Button, QColor(233, 233, 233))
+    p.setColor(QPalette.ButtonText, texto)
+    p.setColor(QPalette.BrightText, QColor(200, 30, 30))
+    p.setColor(QPalette.Link, destaque)
+    p.setColor(QPalette.Highlight, destaque)
+    p.setColor(QPalette.HighlightedText, QColor(255, 255, 255))
+    p.setColor(QPalette.PlaceholderText, QColor(138, 138, 138))
+    for papel in (QPalette.Text, QPalette.WindowText, QPalette.ButtonText):
+        p.setColor(QPalette.Disabled, papel, desabilitado)
+    return p
 
 
 def alternar_tema() -> None:
     aplicar_tema(not carregar_preferencia())
+
+
+def aplicar_tema(escuro: bool) -> None:
+    app = QApplication.instance()
+    app.setStyle("Fusion")
+    estilo = app.styleHints()
+    if hasattr(estilo, "setColorScheme"):
+        estilo.setColorScheme(Qt.ColorScheme.Dark if escuro else Qt.ColorScheme.Light)
+    app.setPalette(_paleta_escura() if escuro else _paleta_clara())
+    salvar_preferencia(escuro)
