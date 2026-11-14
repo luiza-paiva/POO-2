@@ -1,13 +1,10 @@
-import sys
 from PySide6.QtWidgets import (
-    QWidget, QApplication, QMainWindow, QToolBar, QLabel, QLineEdit,
-    QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QDialog,
-    QFormLayout, QComboBox, QMessageBox, QSpinBox, QPlainTextEdit
+    QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QListWidget,
+    QDialog, QFormLayout, QComboBox, QSpinBox, QPlainTextEdit, QCheckBox
 )
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt
-from models import Filme
-from repositorio import RepositorioFilmes
+import tema
 
 
 class JanelaAlugar(QDialog):
@@ -57,6 +54,7 @@ class JanelaCadastro(QDialog):
         print("Janela de cadastro fechada")
         event.accept()
 
+
 class JanelaHistorico(QDialog):
     def __init__(self):
         super().__init__()
@@ -77,27 +75,78 @@ class JanelaHistorico(QDialog):
             self.lista.addItem(f"{r['data_hora']} - {r['usuario']} - {r['filme']} - {r['acao']}")
         self.textoHistorico.setText(f"{len(registros)} registro(s)")
 
+
 class JanelaCadastroUsuario(QDialog):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Cadastrar Usuario")
-        self.resize(300, 150)
+        self.setWindowTitle("Criar conta")
+        self.resize(420, 520)
+        self.setObjectName("raiz")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet(tema.estilo_login())
+
+        icone = QLabel("👤")
+        icone.setAlignment(Qt.AlignCenter)
+        fonteIcone = QFont()
+        fonteIcone.setPointSize(40)
+        icone.setFont(fonteIcone)
+
+        titulo = QLabel("Criar conta")
+        titulo.setAlignment(Qt.AlignCenter)
+        fonteTitulo = QFont()
+        fonteTitulo.setPointSize(20)
+        fonteTitulo.setBold(True)
+        titulo.setFont(fonteTitulo)
 
         self.login = QLineEdit()
+        self.login.setPlaceholderText("Login")
+
         self.senha = QLineEdit()
+        self.senha.setPlaceholderText("Senha")
         self.senha.setEchoMode(QLineEdit.Password)
+
         self.confirmarSenha = QLineEdit()
+        self.confirmarSenha.setPlaceholderText("Confirmar senha")
         self.confirmarSenha.setEchoMode(QLineEdit.Password)
 
-        self.salvar = QPushButton("Salvar")
+        self.verSenha = QCheckBox("Mostrar senha")
+        self.verSenha.toggled.connect(self.alternar_senha)
+
+        self.salvar = QPushButton("Criar conta")
+        self.salvar.setObjectName("botaoLogin")
+        self.salvar.setCursor(Qt.PointingHandCursor)
         self.salvar.clicked.connect(self.accept)
 
-        self.layout = QFormLayout()
-        self.layout.addRow("Login:", self.login)
-        self.layout.addRow("Senha:", self.senha)
-        self.layout.addRow("Confirmar senha:", self.confirmarSenha)
-        self.layout.addRow(self.salvar)
-        self.setLayout(self.layout)
+        self.cancelar = QPushButton("Cancelar")
+        self.cancelar.setObjectName("botaoCriar")
+        self.cancelar.setCursor(Qt.PointingHandCursor)
+        self.cancelar.clicked.connect(self.reject)
+
+        cartao = QWidget()
+        cartao.setFixedWidth(320)
+        coluna = QVBoxLayout(cartao)
+        coluna.setContentsMargins(0, 0, 0, 0)
+        coluna.setSpacing(12)
+        coluna.addWidget(icone)
+        coluna.addWidget(titulo)
+        coluna.addSpacing(16)
+        coluna.addWidget(self.login)
+        coluna.addWidget(self.senha)
+        coluna.addWidget(self.confirmarSenha)
+        coluna.addWidget(self.verSenha)
+        coluna.addSpacing(4)
+        coluna.addWidget(self.salvar)
+        coluna.addWidget(self.cancelar)
+
+        raiz = QVBoxLayout(self)
+        raiz.addStretch()
+        raiz.addWidget(cartao, alignment=Qt.AlignHCenter)
+        raiz.addStretch()
+
+    def alternar_senha(self, visivel):
+        modo = QLineEdit.Normal if visivel else QLineEdit.Password
+        self.senha.setEchoMode(modo)
+        self.confirmarSenha.setEchoMode(modo)
 
 
 class JanelaAvaliar(QDialog):

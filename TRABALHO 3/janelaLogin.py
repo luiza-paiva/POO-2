@@ -11,74 +11,6 @@ from dialogos import JanelaCadastroUsuario
 from registroUsuarios import registroUsuarios
 import tema
 
-ESTILO = Template("""
-QWidget#raiz {
-    background: $fundo;
-}
-QLabel {
-    color: $texto;
-}
-QLineEdit {
-    background: $campo;
-    color: $texto;
-    border: 1px solid $borda;
-    border-radius: 8px;
-    padding: 10px 12px;
-}
-QLineEdit:focus {
-    border: 1px solid $destaque;
-}
-QCheckBox {
-    color: $texto;
-}
-QCheckBox::indicator {
-    width: 16px;
-    height: 16px;
-    border: 1px solid $borda;
-    border-radius: 4px;
-    background: $campo;
-}
-QCheckBox::indicator:checked {
-    background: $destaque;
-    border: 1px solid $destaque;
-}
-QPushButton#botaoLogin {
-    background: $destaque;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    padding: 12px;
-    font-weight: bold;
-}
-QPushButton#botaoCriar {
-    background: transparent;
-    color: $texto;
-    border: 1px solid $borda;
-    border-radius: 8px;
-    padding: 12px;
-}
-QPushButton#botaoCriar:hover, QPushButton#botaoTema:hover {
-    background: $hover;
-}
-QPushButton#botaoTema {
-    background: transparent;
-    color: $texto;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 12px;
-}
-""")
-
-CORES_CLARO = {
-    "fundo": "#f5f5f5", "campo": "#ffffff", "texto": "#1a1a1a",
-    "suave": "#6b7280", "borda": "#c4c4c4", "destaque": "#2a82da",
-    "hover": "rgba(0, 0, 0, 20)",
-}
-CORES_ESCURO = {
-    "fundo": "#2d2d2d", "campo": "#1e1e1e", "texto": "#e6e6e6",
-    "suave": "#9aa0a6", "borda": "#5a5a5a", "destaque": "#2a82da",
-    "hover": "rgba(255, 255, 255, 30)",
-}
 
 
 class JanelaLogin(QMainWindow):
@@ -158,8 +90,7 @@ class JanelaLogin(QMainWindow):
         self.aplicar_estilo()
 
     def aplicar_estilo(self):
-        cores = CORES_ESCURO if tema.carregar_preferencia() else CORES_CLARO
-        self.container.setStyleSheet(ESTILO.substitute(cores))
+        self.container.setStyleSheet(tema.estilo_login())
 
     def alternar_tema(self):
         tema.alternar_tema()

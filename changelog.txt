@@ -107,6 +107,17 @@ Alterado
   cada filme e mantém o filme selecionado após alugar, devolver ou
   recarregar a lista.
 - Janela.mostrar_atalhos: inclui o atalho Ctrl+B (Avaliar filme).
+- Janela.atualizar_lista: passa a recriar as fileiras de cards em vez
+  de preencher um QListWidget; mantém o filme selecionado após alugar,
+  devolver ou recarregar.
+- Janela.filme_selecionado: devolve o filme clicado (filmeAtual), então
+  alugar, devolver, avaliar, editar e excluir continuam funcionando.
+- tema.py: estilos dos cards (normal, hover e selecionado) e do título
+  da fileira para os temas claro e escuro, aplicados com setStyleSheet.
+- tema.py: o estilo da tela de login (ESTILO, CORES_CLARO,
+  CORES_ESCURO) foi movido para cá, com a função estilo_login(), para
+  ser compartilhado com a tela de criar conta sem import circular.
+- janelaLogin.py: passou a usar tema.estilo_login().
 
 Adicionado - Regras de negócio
 - Controle de quem alugou cada filme (validação na devolução).
@@ -129,3 +140,17 @@ Adicionado
 - Ação "Avaliar Filme" para usuários comuns (menu, barra de ferramentas
   e atalho Ctrl+B).
 - Média de avaliações exibida na lista de filmes.
+
+Adicionado - Interface
+- cartaoFilme.py: classe CartaoFilme, card de cada filme com pôster
+  (posters/<id>.jpg), título, status Disponível/Alugado e sinal de
+  clique. Sem pôster, mostra um fundo colorido por gênero.
+- cartaoFilme.py: classe FileiraGenero, fileira com título do gênero e
+  rolagem horizontal, com altura ajustada ao tamanho do card.
+- Janela principal: a lista de filmes foi trocada por fileiras de
+  cards agrupadas por gênero, dentro de uma área de rolagem vertical.
+- Janela.selecionar_filme: guarda o filme clicado (filmeAtual) e marca
+  o card selecionado com borda de destaque.
+- JanelaCadastroUsuario: tela de criar conta com o mesmo design da
+  tela de login (ícone, título, campos com placeholder, mostrar senha
+  e botão Cancelar).

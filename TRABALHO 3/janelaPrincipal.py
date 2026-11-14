@@ -3,7 +3,8 @@ from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QApplication, QMainWindow, QToolBar, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QDialog,
-    QFormLayout, QComboBox, QMessageBox, QFormLayout, QComboBox, QMessageBox, QFileDialog, QStyle
+    QFormLayout, QComboBox, QMessageBox, QFormLayout, QComboBox,
+    QMessageBox,QFileDialog, QStyle, QScrollArea
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
@@ -13,6 +14,7 @@ from historicoAlgueis import historico
 from dialogos import JanelaAlugar, JanelaCadastro, JanelaHistorico, JanelaAvaliar
 from tarefas_arquivo import GravarDados, CarregarHistorico, ExportarHistorico, GravarAvaliacoes
 import tema
+from cartaoFilme import FileiraGenero
 
 class Janela(QMainWindow):
     def __init__(self, login,tipo_usuario="Usuário"):
@@ -133,14 +135,22 @@ class Janela(QMainWindow):
         self.botao = QPushButton("Buscar")
         self.botao.clicked.connect(self.buscar_filme)
 
-        self.lista = QListWidget()
+        self.area = QScrollArea()
+        self.area.setWidgetResizable(True)
+
+        self.conteudoFileiras = QWidget()
+        self.layoutFileiras = QVBoxLayout(self.conteudoFileiras)
+        self.area.setWidget(self.conteudoFileiras)
+
+        self.filmeAtual = None
+        self.fileiras = []
 
         self.textoLocadora = QLabel("Locadora de Filmes")
         self.layoutPrincipal = QVBoxLayout()
         self.layoutPrincipal.addWidget(self.textoLocadora)
         self.layoutPrincipal.addWidget(self.input)
         self.layoutPrincipal.addWidget(self.botao)
-        self.layoutPrincipal.addWidget(self.lista)
+        self.layoutPrincipal.addWidget(self.area)
 
         container = QWidget()
         container.setLayout(self.layoutPrincipal)
@@ -149,19 +159,30 @@ class Janela(QMainWindow):
         self.atualizar_lista()
 
     def atualizar_lista(self, filmes=None):
-        atual = self.lista.currentItem()
-        id_selecionado = atual.data(Qt.UserRole) if atual else None
-        self.lista.clear()
-        for filme in (filmes if filmes is not None else self.filmes):
-            texto = str(filme)
-            notas = [a.nota for a in self.avaliacoes if a.filme_id == filme.id]
-            if notas:
-                texto += f"  ★ {sum(notas)/len(notas):.1f} ({len(notas)})"
-            item = QListWidgetItem(texto)
-            item.setData(Qt.UserRole, filme.id)
-            self.lista.addItem(item)
-            if filme.id == id_selecionado:
-                self.lista.setCurrentItem(item)
+        while self.layoutFileiras.count():
+            item = self.layoutFileiras.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+        self.fileiras = []
+
+        grupos = {}
+        for f in (filmes if filmes is not None else self.filmes):
+            grupos.setdefault(f.genero, []).append(f)
+
+        for genero, lista in grupos.items():
+            fileira = FileiraGenero(genero, lista)
+            fileira.clicado.connect(self.selecionar_filme)
+            self.layoutFileiras.addWidget(fileira)
+            self.fileiras.append(fileira)
+
+        self.layoutFileiras.addStretch()
+
+        if self.filmeAtual is not None:
+            for fileira in self.fileiras:
+                for c in fileira.cartoes:
+                    c.set_selecionado(c.filme_id == self.filmeAtual.id)
+
 
     def filtrar_por_genero(self, genero):
         filtrados = [f for f in self.filmes if f.genero == genero]
@@ -173,11 +194,13 @@ class Janela(QMainWindow):
         self.atualizar_lista(filtrados)
 
     def filme_selecionado(self):
-        item = self.lista.currentItem()
-        if item is None:
-            return None
-        id_selecionado = item.data(Qt.UserRole)
-        return next((f for f in self.filmes if f.id == id_selecionado), None)
+        return self.filmeAtual
+
+    def selecionar_filme(self, id_filme):
+        self.filmeAtual = next((f for f in self.filmes if f.id == id_filme), None)
+        for fileira in self.fileiras:
+            for c in fileira.cartoes:
+                c.set_selecionado(c.filme_id == id_filme)
 
     def cadastrar_filme(self):
         dialog = JanelaCadastro()
