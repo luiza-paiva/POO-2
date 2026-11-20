@@ -1,10 +1,8 @@
-import sys
 from datetime import datetime
 from PySide6.QtWidgets import (
-    QWidget, QApplication, QMainWindow, QToolBar, QLabel, QLineEdit,
-    QPushButton, QVBoxLayout, QListWidget, QListWidgetItem, QDialog,
-    QFormLayout, QComboBox, QMessageBox, QFormLayout, QComboBox,
-    QMessageBox,QFileDialog, QStyle, QScrollArea
+    QWidget, QMainWindow, QToolBar, QLabel, QLineEdit,
+    QPushButton, QVBoxLayout, QDialog,
+    QMessageBox, QFileDialog, QStyle, QScrollArea
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt

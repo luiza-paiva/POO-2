@@ -57,7 +57,7 @@ Alterado
 - A tela de cadastro cria apenas contas do tipo Usuário.
 
 ------------------------------------------------------------------------------------------------
-ENTREGA FINAL
+ENTREGA FINAL - TRABALHO 2
 
 Alterado
 - JanelaCadastroUsuario: corrigido o nome do campo confirmarSenha.
@@ -84,7 +84,7 @@ Adicionado - Interface
 
 TRABALHO 3
 
-Primeira entrega parcial
+ENTREGA PARCIAL 01
 ------------------------------------------------------------
 Alterado
 - janelaLogin.py: nova tela de login, com bloco centralizado, icone,
@@ -154,3 +154,8 @@ Adicionado - Interface
 - JanelaCadastroUsuario: tela de criar conta com o mesmo design da
   tela de login (ícone, título, campos com placeholder, mostrar senha
   e botão Cancelar).
+
+Adicionado - Dados
+-esquema.sql: esquema dos dados do PostgreeSQL, usuario, filme, gênero,
+alugueis
+-esquema.cypher: esquema dos dados do Neo4j

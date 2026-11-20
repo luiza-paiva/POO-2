@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+psycopg[binary]
+neo4j
+python-dotenv
+bcrypt
