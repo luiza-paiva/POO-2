@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 import filmes
+import alugueis
 import usuarios
 from db import driver, pg, preparar_neo4j
 
@@ -24,6 +25,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Locadora API", lifespan=lifespan)
 app.include_router(usuarios.router)
 app.include_router(filmes.router)
+app.include_router(alugueis.router)
 
 
 @app.get("/saude")

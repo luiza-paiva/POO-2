@@ -155,7 +155,51 @@ Adicionado - Interface
   tela de login (ícone, título, campos com placeholder, mostrar senha
   e botão Cancelar).
 
-Adicionado - Dados
--esquema.sql: esquema dos dados do PostgreeSQL, usuario, filme, gênero,
-alugueis
--esquema.cypher: esquema dos dados do Neo4j
+------------------------------------------------------------------------------------------------
+ENTREGA PARCIAL 02
+------------------------------------------------------------
+Adicionado - Infraestrutura (Docker)
+- docker-compose.yml: sobe três serviços em contêineres: postgres
+  (PostgreSQL 16), neo4j (Neo4j 5) e api (FastAPI). Os bancos só são
+  acessados pela API, dentro da rede do Docker.
+- Dockerfile (API/): imagem da API em Python 3.12.
+- Volumes pg_data e neo4j_data, para os dados não se perderem ao
+  recriar os contêineres.
+- Verificação de saúde (healthcheck) nos dois bancos; a API só inicia
+  depois que ambos estão prontos.
+- .env: senhas dos bancos fora do código (não versionado).
+- MANUAL.md: manual de execução e comandos úteis.
+
+Adicionado - Bancos de dados
+- PostgreSQL (fonte da verdade): tabelas usuarios, generos, filmes,
+  alugueis e avaliacoes (DADOS/esquema.sql), com chaves estrangeiras,
+  CHECK (tipo da conta e nota de 1 a 5), UNIQUE (uma avaliação por
+  usuário e filme) e ON DELETE CASCADE (excluir filme remove as
+  avaliações).
+- Aluguel ativo é o registro sem data_devolucao; um índice único
+  parcial impede dois aluguéis ativos do mesmo filme. A tabela
+  alugueis substitui o alugueis.csv como histórico.
+- Neo4j (grafo de recomendação): nós Usuario, Filme e Genero, relações
+  ALUGOU e DO_GENERO, com constraints de unicidade
+  (DADOS/esquema.cypher). Guarda só login, id, título e gênero; senha
+  e datas ficam apenas no PostgreSQL.
+- Justificativa do armazenamento: PostgreSQL para dados estruturados,
+  transações e integridade; Neo4j para as relações entre usuários e
+  filmes (recomendação); arquivos continuam para pôsteres, preferência
+  de tema e exportação do histórico em .txt.
+
+Adicionado - API (FastAPI, pasta API/)
+- main.py: aplicação, rota /saude e inicialização (constraints do
+  Neo4j, administrador padrão, gêneros e catálogo inicial de 15 filmes).
+- db.py: conexões com PostgreSQL e Neo4j, configuradas por variáveis
+  de ambiente.
+- usuarios.py: POST /usuarios/cadastro e POST /usuarios/login, com
+  senha guardada em hash (bcrypt).
+- filmes.py: GET e POST /filmes, PUT e DELETE /filmes/{id} e
+  GET /filmes/generos. A listagem traz status, quem alugou, média e
+  quantidade de avaliações.
+- alugueis.py: POST /alugueis, POST /alugueis/devolucao e
+  GET /alugueis/historico. Só quem alugou o filme pode devolvê-lo.
+- Gravação em duas etapas: primeiro no PostgreSQL, depois replicada no
+  Neo4j com MERGE. Se o Neo4j estiver fora do ar, o sistema continua
+  funcionando.
