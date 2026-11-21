@@ -203,3 +203,80 @@ Adicionado - API (FastAPI, pasta API/)
 - Gravação em duas etapas: primeiro no PostgreSQL, depois replicada no
   Neo4j com MERGE. Se o Neo4j estiver fora do ar, o sistema continua
   funcionando.
+
+Adicionado - Interface
+- telaFilme.py: classe TelaFilme, tela individual do filme, aberta ao
+  clicar no card. Mostra pôster grande, título, etiquetas de gênero e
+  status (Disponível ou Alugado por <usuário>), nota média, sinopse e
+  as avaliações dos usuários (estrelas e comentário).
+- TelaFilme: o usuário comum vê os botões Alugar/Devolver filme e
+  Avaliar filme; o Admin vê Editar filme e Excluir. Os botões chamam
+  os métodos da janela principal, então as regras continuam as mesmas,
+  e a tela se atualiza depois de cada ação.
+- TelaFilme: o botão fica "Indisponível" (desabilitado) quando outro
+  usuário alugou o filme. Avaliar filme fica desabilitado, com a dica
+  "Alugue este filme para poder avaliá-lo", se o usuário ainda não
+  alugou, e vira "Editar minha avaliação" se ele já avaliou.
+- Janela principal: cabeçalho com saudação ("Olá, <login>") e dica de
+  uso, de acordo com o tipo de conta.
+- Janela principal: a busca filtra enquanto o usuário digita (o botão
+  "Buscar" foi removido) e mostra uma mensagem quando nenhum filme é
+  encontrado.
+- Janela principal: botões de filtro por gênero (Todos, Romance, Ação,
+  Drama, Terror e Ficção científica), que funcionam junto com a busca.
+  O menu Gênero ganhou a opção "Todos os gêneros".
+- cartaoFilme.py: card redesenhado, menor, com selo Disponível/Alugado
+  sobre o pôster, título e nota média (ex.: ★ 4,5 (2)) ou "Sem
+  avaliações".
+- cartaoFilme.py: setas ‹ e › em cada fileira para rolar os filmes,
+  exibidas só quando há mais filmes do que cabem na tela. A roda do
+  mouse sobre a fileira rola a página.
+- EstrelasWidget (dialogos.py): nota de 1 a 5 em estrelas clicáveis,
+  usada na JanelaAvaliar no lugar do QSpinBox.
+- JanelaCadastro (dialogos.py): novo campo Sinopse, usado ao cadastrar
+  e ao editar um filme.
+- posters/: pôsteres dos 15 filmes do catálogo inicial.
+
+Adicionado - Código
+- Filme (models.py): novo campo sinopse. O from_dict lê o campo com
+  .get, então o filmes.json antigo continua carregando.
+- SINOPSES (repositorio.py): sinopse dos 15 filmes iniciais.
+  RepositorioFilmes.carregar preenche a sinopse dos filmes do catálogo
+  inicial que ainda não têm e grava o arquivo.
+- cartaoFilme.py: funções formatar_nota, nome_arquivo_poster,
+  caminho_poster e gerar_poster (pôster com cantos arredondados).
+- Janela.definir_genero: guarda o gênero escolhido e marca o botão de
+  filtro correspondente.
+- Janela.ja_alugou: verifica no histórico se o usuário já alugou o
+  filme.
+- tema.py: ESTILO_APP e função estilo_app(), com o estilo dos cards,
+  fileiras, filtros, busca e tela do filme nos temas claro e escuro.
+
+Alterado
+- cartaoFilme.py: o pôster agora é procurado em posters/<título>.jpg
+  (título em minúsculas, sem acento, com espaços e símbolos trocados
+  por _, ex.: o_poderoso_chefao.jpg). Também aceita .jpeg, .png e
+  .webp, e posters/<id>.jpg continua como alternativa. O id é gerado
+  de forma aleatória em cada máquina, então não servia para nomear os
+  arquivos. Sem pôster, o card mostra um degradê com a cor do gênero e
+  a inicial do título.
+- cartaoFilme.py: o sinal clicado passou a enviar o id como texto
+  (antes era int, mas os ids são uuid) e o card passou a expor
+  filme_id, nome que a janela principal já usava.
+- Janela.atualizar_lista: passa a aplicar a busca e o gênero
+  escolhidos, então o filtro se mantém depois de alugar ou devolver.
+  Também calcula a média e a quantidade de avaliações exibidas no card
+  e ordena as fileiras pela lista GENEROS.
+- Janela.selecionar_filme: além de marcar o card, abre a TelaFilme.
+- Janela.filtrar_por_genero: passa a chamar definir_genero.
+- Janela.buscar_filme: removido, pois a busca agora é feita em
+  atualizar_lista a cada letra digitada.
+- Janela.avaliar_filme: a verificação de aluguel passou para
+  ja_alugou.
+- Janela.excluir_filme: limpa o filme selecionado depois de excluir.
+- Janela.cadastrar_filme e Janela.editar_filme: passam a gravar a
+  sinopse.
+- JanelaAvaliar: a nota é escolhida em estrelas (EstrelasWidget).
+- tema.py: os estilos dos cards (_QSS_COMUM, _QSS_ESCURO e _QSS_CLARO)
+  foram substituídos por ESTILO_APP. O fundo do tema claro foi
+  clareado (de 220 para 240).

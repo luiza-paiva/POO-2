@@ -1,9 +1,9 @@
 from PySide6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QListWidget,
-    QDialog, QFormLayout, QComboBox, QSpinBox, QPlainTextEdit, QCheckBox
+    QDialog, QFormLayout, QComboBox, QPlainTextEdit, QCheckBox, QHBoxLayout
 )
 from PySide6.QtGui import QFont
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 import tema
 
 
@@ -30,10 +30,10 @@ class JanelaAlugar(QDialog):
 
 
 class JanelaCadastro(QDialog):
-    def __init__(self, titulo="", genero=""):
+    def __init__(self, titulo="", genero="", sinopse=""):
         super().__init__()
         self.setWindowTitle("Cadastrar/Editar Filme")
-        self.resize(300, 150)
+        self.resize(420, 330)
 
         self.campoTitulo = QLineEdit(titulo)
         self.campoGenero = QComboBox()
@@ -41,12 +41,16 @@ class JanelaCadastro(QDialog):
         if genero:
             self.campoGenero.setCurrentText(genero)
 
+        self.campoSinopse = QPlainTextEdit(sinopse)
+        self.campoSinopse.setPlaceholderText("Resumo do filme, sem revelar o final")
+
         self.botaoSalvar = QPushButton("Salvar")
         self.botaoSalvar.clicked.connect(self.accept)
 
         layout = QFormLayout()
         layout.addRow("Título:", self.campoTitulo)
         layout.addRow("Gênero:", self.campoGenero)
+        layout.addRow("Sinopse:", self.campoSinopse)
         layout.addRow(self.botaoSalvar)
         self.setLayout(layout)
 
@@ -149,19 +153,49 @@ class JanelaCadastroUsuario(QDialog):
         self.confirmarSenha.setEchoMode(modo)
 
 
+class EstrelasWidget(QWidget):
+    mudou = Signal(int)
+
+    def __init__(self, valor=5):
+        super().__init__()
+        self._valor = valor
+        self._botoes = []
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+        for i in range(1, 6):
+            botao = QPushButton("★")
+            botao.setFlat(True)
+            botao.setCursor(Qt.PointingHandCursor)
+            botao.setToolTip(f"{i} de 5")
+            botao.clicked.connect(lambda _=False, n=i: self.setValue(n))
+            layout.addWidget(botao)
+            self._botoes.append(botao)
+        layout.addStretch()
+        self.setValue(valor)
+
+    def value(self):
+        return self._valor
+
+    def setValue(self, valor):
+        self._valor = valor
+        for i, botao in enumerate(self._botoes, 1):
+            cor = "#f5b301" if i <= valor else "#8a8a8a"
+            botao.setStyleSheet(
+                f"border: none; background: transparent; font-size: 32px; color: {cor};")
+        self.mudou.emit(valor)
+
+
 class JanelaAvaliar(QDialog):
     def __init__(self, titulo_filme, nota=5, comentario=""):
         super().__init__()
         self.setWindowTitle("Avaliar Filme")
-        self.resize(350, 250)
+        self.resize(380, 300)
 
         self.campoFilme = QLineEdit(titulo_filme)
         self.campoFilme.setEnabled(False)
 
-        self.campoNota = QSpinBox()
-        self.campoNota.setRange(1, 5)
-        self.campoNota.setValue(nota)
-        self.campoNota.setSuffix(" ★")
+        self.campoNota = EstrelasWidget(nota)
 
         self.campoComentario = QPlainTextEdit(comentario)
         self.campoComentario.setPlaceholderText("Comentário (opcional)")
