@@ -71,32 +71,97 @@ CORES_CLARO = {
     "fundo": "#f5f5f5", "campo": "#ffffff", "texto": "#1a1a1a",
     "suave": "#6b7280", "borda": "#c4c4c4", "destaque": "#2a82da",
     "hover": "rgba(0, 0, 0, 20)",
+    "superficie": "#ffffff", "superficie_hover": "#f7f7f7", "linha": "#e0e0e0",
+    "destaque_hover": "#1f6fbf",
 }
 CORES_ESCURO = {
     "fundo": "#2d2d2d", "campo": "#1e1e1e", "texto": "#e6e6e6",
     "suave": "#9aa0a6", "borda": "#5a5a5a", "destaque": "#2a82da",
     "hover": "rgba(255, 255, 255, 30)",
+    "superficie": "#363636", "superficie_hover": "#404040", "linha": "#454545",
+    "destaque_hover": "#4a97e8",
 }
 
 CAMINHO_CONFIG = PASTA_DADOS / "config.json"
 
 
-_QSS_COMUM = """
-QLabel#tituloFileira { font-size: 18px; font-weight: bold; }
+ESTILO_APP = Template("""
+QLabel#saudacao { font-size: 26px; font-weight: bold; }
+QLabel#subtitulo { color: $suave; font-size: 13px; }
+QLabel#vazio { color: $suave; font-size: 15px; }
+QLabel#tituloFileira { font-size: 19px; font-weight: bold; }
+
+QLineEdit#busca {
+    background: $campo; color: $texto; border: 1px solid $borda;
+    border-radius: 19px; padding: 9px 16px; font-size: 14px;
+}
+QLineEdit#busca:focus { border: 1px solid $destaque; }
+
+QPushButton#chipGenero {
+    background: transparent; color: $texto; border: 1px solid $borda;
+    border-radius: 14px; padding: 6px 16px; font-size: 13px;
+}
+QPushButton#chipGenero:hover { background: $hover; }
+QPushButton#chipGenero:checked {
+    background: $destaque; border: 1px solid $destaque; color: #ffffff; font-weight: bold;
+}
+
+QPushButton#setaFileira {
+    background: transparent; color: $texto; border: 1px solid $borda;
+    border-radius: 15px; min-width: 30px; max-width: 30px;
+    min-height: 30px; max-height: 30px; font-size: 18px; padding: 0 0 2px 0;
+}
+QPushButton#setaFileira:hover { background: $hover; }
+
+QFrame#cartao {
+    background: $superficie; border: 2px solid transparent; border-radius: 14px;
+}
+QFrame#cartao:hover { background: $superficie_hover; border: 2px solid $borda; }
+QFrame#cartao[selecionado="true"] { border: 2px solid $destaque; }
 QFrame#cartao QLabel { background: transparent; }
-"""
+QLabel#cartaoTitulo { font-size: 14px; font-weight: bold; }
+QLabel#cartaoNota { color: $suave; font-size: 12px; }
 
-_QSS_ESCURO = _QSS_COMUM + """
-QFrame#cartao { background-color: #1f1f1f; border-radius: 10px; border: 10px solid #1f1f1f; }
-QFrame#cartao:hover { background-color: #2a2a2a; border-color: #2a2a2a; }
-QFrame#cartao[selecionado="true"] { border: 10px solid #e50914; }
-"""
+QScrollArea { background: transparent; border: none; }
+QScrollBar:horizontal { height: 8px; background: transparent; margin: 0; }
+QScrollBar::handle:horizontal { background: $borda; border-radius: 4px; min-width: 40px; }
+QScrollBar:vertical { width: 10px; background: transparent; margin: 0; }
+QScrollBar::handle:vertical { background: $borda; border-radius: 5px; min-height: 40px; }
+QScrollBar::add-line, QScrollBar::sub-line { width: 0; height: 0; }
+QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
 
-_QSS_CLARO = _QSS_COMUM + """
-QFrame#cartao { background-color: #ffffff; border-radius: 10px; border: 10px solid #ffffff; }
-QFrame#cartao:hover { background-color: #e9e9e9; border-color: #e9e9e9; }
-QFrame#cartao[selecionado="true"] { border: 10px solid #e50914; }
-"""
+QLabel#telaTitulo { font-size: 28px; font-weight: bold; }
+QLabel#telaSecao { font-size: 16px; font-weight: bold; }
+QLabel#telaTexto { font-size: 14px; }
+QLabel#telaDica { color: $suave; font-size: 12px; }
+QFrame#caixaAvaliacao {
+    background: $superficie; border: 1px solid $linha; border-radius: 10px;
+}
+QFrame#caixaAvaliacao QLabel { background: transparent; }
+
+QPushButton#botaoPrimario {
+    background: $destaque; color: #ffffff; border: none; border-radius: 8px;
+    padding: 11px 24px; font-weight: bold; font-size: 14px;
+}
+QPushButton#botaoPrimario:hover { background: $destaque_hover; }
+QPushButton#botaoPrimario:disabled { background: $borda; color: $suave; }
+QPushButton#botaoSecundario {
+    background: transparent; color: $texto; border: 1px solid $borda;
+    border-radius: 8px; padding: 10px 22px; font-size: 14px;
+}
+QPushButton#botaoSecundario:hover { background: $hover; }
+QPushButton#botaoSecundario:disabled { color: $suave; border-color: $linha; }
+QPushButton#botaoPerigo {
+    background: transparent; color: #e5534b; border: 1px solid #e5534b;
+    border-radius: 8px; padding: 10px 22px; font-size: 14px;
+}
+QPushButton#botaoPerigo:hover { background: rgba(229, 83, 75, 40); }
+""")
+
+
+def estilo_app(escuro: bool) -> str:
+    return ESTILO_APP.substitute(CORES_ESCURO if escuro else CORES_CLARO)
+
 
 def estilo_login() -> str:
     cores = CORES_ESCURO if carregar_preferencia() else CORES_CLARO
@@ -147,7 +212,7 @@ def _paleta_escura() -> QPalette:
 
 def _paleta_clara() -> QPalette:
     p = QPalette()
-    fundo = QColor(220, 220, 220)
+    fundo = QColor(240, 240, 240)
     base = QColor(255, 255, 255)
     texto = QColor(26, 26, 26)
     destaque = QColor(42, 130, 218)
@@ -184,4 +249,4 @@ def aplicar_tema(escuro: bool) -> None:
         estilo.setColorScheme(Qt.ColorScheme.Dark if escuro else Qt.ColorScheme.Light)
     app.setPalette(_paleta_escura() if escuro else _paleta_clara())
     salvar_preferencia(escuro)
-    app.setStyleSheet(_QSS_ESCURO if escuro else _QSS_CLARO)
+    app.setStyleSheet(estilo_app(escuro))

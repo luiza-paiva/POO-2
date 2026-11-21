@@ -17,6 +17,7 @@ class Filme:
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
     alugado_por: str = ""      # login de quem alugou
     data_aluguel: str = ""     # "dd/mm/aaaa HH:MM:SS"
+    sinopse: str = ""
 
     @property
     def disponivel(self) -> bool:
@@ -34,6 +35,7 @@ class Filme:
             id=str(dados.get("id") or uuid.uuid4().hex),
             alugado_por=str(dados.get("alugado_por", "")),
             data_aluguel=str(dados.get("data_aluguel", "")),
+            sinopse=str(dados.get("sinopse", "")),
         )
 
     def __str__(self) -> str:

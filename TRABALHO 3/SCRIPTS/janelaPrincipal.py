@@ -1,18 +1,19 @@
 from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QMainWindow, QToolBar, QLabel, QLineEdit,
-    QPushButton, QVBoxLayout, QDialog,
+    QPushButton, QVBoxLayout, QHBoxLayout, QDialog, QButtonGroup,
     QMessageBox, QFileDialog, QStyle, QScrollArea
 )
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
-from models import Filme, Avaliacao, ALUGADO, DISPONIVEL
+from models import Filme, Avaliacao, ALUGADO, DISPONIVEL, GENEROS
 from repositorio import RepositorioFilmes, RepositorioAvaliacoes
 from historicoAlgueis import historico
 from dialogos import JanelaAlugar, JanelaCadastro, JanelaHistorico, JanelaAvaliar
 from tarefas_arquivo import GravarDados, CarregarHistorico, ExportarHistorico, GravarAvaliacoes
 import tema
 from cartaoFilme import FileiraGenero
+from telaFilme import TelaFilme
 
 class Janela(QMainWindow):
     def __init__(self, login,tipo_usuario="Usuário"):
@@ -20,7 +21,8 @@ class Janela(QMainWindow):
         self.tipo_usuario = tipo_usuario
         self.login = login
         self.setWindowTitle(f"Locadora - {tipo_usuario}")
-        self.resize(800, 600)
+        self.resize(1020, 700)
+        self.setMinimumSize(760, 520)
 
         self.repositorio = RepositorioFilmes()
         self.historico = historico()
@@ -30,7 +32,10 @@ class Janela(QMainWindow):
         self.tarefas = []
 
         self.menuGenero = self.menuBar().addMenu("Gênero")
-        for genero in ["romance", "ação", "drama", "terror", "ficção científica"]:
+        acaoTodos = QAction("Todos os gêneros", self)
+        acaoTodos.triggered.connect(lambda: self.definir_genero(None))
+        self.menuGenero.addAction(acaoTodos)
+        for genero in GENEROS:
             acao = QAction(genero, self)
             acao.triggered.connect(lambda checked, g=genero: self.filtrar_por_genero(g))
             self.menuGenero.addAction(acao)
@@ -38,6 +43,7 @@ class Janela(QMainWindow):
 
         self.menuFilme = self.menuBar().addMenu("Filme")
         self.barra = QToolBar()
+        self.barra.setMovable(False)
         self.barra.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.addToolBar(self.barra)
 
@@ -126,28 +132,67 @@ class Janela(QMainWindow):
         self.menuFilme.addAction(self.acaoAtalhos)
         self.barra.addAction(self.acaoAtalhos)
 
-        self.input = QLineEdit()
-        self.input.setPlaceholderText("Buscar filme...")
-        self.input.returnPressed.connect(self.buscar_filme)
+        self.filmeAtual = None
+        self.fileiras = []
+        self.generoAtivo = None
 
-        self.botao = QPushButton("Buscar")
-        self.botao.clicked.connect(self.buscar_filme)
+        saudacao = QLabel(f"Olá, {self.login}")
+        saudacao.setObjectName("saudacao")
+        if self.tipo_usuario == "Admin":
+            dica = "Clique em um filme para ver os detalhes, editar ou excluir."
+        else:
+            dica = "Clique em um filme para ver a sinopse, alugar ou avaliar."
+        subtitulo = QLabel(dica)
+        subtitulo.setObjectName("subtitulo")
+        textos = QVBoxLayout()
+        textos.setSpacing(2)
+        textos.addWidget(saudacao)
+        textos.addWidget(subtitulo)
+
+        self.input = QLineEdit()
+        self.input.setObjectName("busca")
+        self.input.setPlaceholderText("Buscar filme pelo nome")
+        self.input.setClearButtonEnabled(True)
+        self.input.setMinimumWidth(300)
+        self.input.textChanged.connect(self.atualizar_lista)
+
+        cabecalho = QHBoxLayout()
+        cabecalho.addLayout(textos)
+        cabecalho.addStretch()
+        cabecalho.addWidget(self.input, alignment=Qt.AlignVCenter)
+
+        self.chips = {}
+        grupo = QButtonGroup(self)
+        linhaChips = QHBoxLayout()
+        linhaChips.setSpacing(8)
+        for g in [None] + GENEROS:
+            chip = QPushButton("Todos" if g is None else g.capitalize())
+            chip.setObjectName("chipGenero")
+            chip.setCheckable(True)
+            chip.setCursor(Qt.PointingHandCursor)
+            chip.clicked.connect(lambda _=False, genero=g: self.definir_genero(genero))
+            grupo.addButton(chip)
+            linhaChips.addWidget(chip)
+            self.chips[g] = chip
+        linhaChips.addStretch()
+        self.chips[None].setChecked(True)
 
         self.area = QScrollArea()
         self.area.setWidgetResizable(True)
-
+        self.area.setFrameShape(QScrollArea.NoFrame)
         self.conteudoFileiras = QWidget()
+        self.conteudoFileiras.setAutoFillBackground(False)
         self.layoutFileiras = QVBoxLayout(self.conteudoFileiras)
+        self.layoutFileiras.setContentsMargins(0, 4, 8, 12)
+        self.layoutFileiras.setSpacing(18)
         self.area.setWidget(self.conteudoFileiras)
+        self.area.viewport().setAutoFillBackground(False)
 
-        self.filmeAtual = None
-        self.fileiras = []
-
-        self.textoLocadora = QLabel("Locadora de Filmes")
         self.layoutPrincipal = QVBoxLayout()
-        self.layoutPrincipal.addWidget(self.textoLocadora)
-        self.layoutPrincipal.addWidget(self.input)
-        self.layoutPrincipal.addWidget(self.botao)
+        self.layoutPrincipal.setContentsMargins(28, 22, 20, 8)
+        self.layoutPrincipal.setSpacing(16)
+        self.layoutPrincipal.addLayout(cabecalho)
+        self.layoutPrincipal.addLayout(linhaChips)
         self.layoutPrincipal.addWidget(self.area)
 
         container = QWidget()
@@ -156,23 +201,43 @@ class Janela(QMainWindow):
 
         self.atualizar_lista()
 
-    def atualizar_lista(self, filmes=None):
+    def atualizar_lista(self, *_):
+        texto = self.input.text().strip().lower()
+        filmes = [f for f in self.filmes
+                  if (self.generoAtivo is None or f.genero == self.generoAtivo)
+                  and texto in f.titulo.lower()]
+
         while self.layoutFileiras.count():
             item = self.layoutFileiras.takeAt(0)
             widget = item.widget()
             if widget is not None:
+                widget.hide()
+                widget.setParent(None)
                 widget.deleteLater()
         self.fileiras = []
 
-        grupos = {}
-        for f in (filmes if filmes is not None else self.filmes):
-            grupos.setdefault(f.genero, []).append(f)
+        notas = {}
+        for a in self.avaliacoes:
+            notas.setdefault(a.filme_id, []).append(a.nota)
+        resumo = {fid: (sum(v) / len(v), len(v)) for fid, v in notas.items()}
 
-        for genero, lista in grupos.items():
-            fileira = FileiraGenero(genero, lista)
+        grupos = {}
+        for f in filmes:
+            grupos.setdefault(f.genero, []).append(f)
+        ordem = [g for g in GENEROS if g in grupos] + [g for g in grupos if g not in GENEROS]
+
+        for genero in ordem:
+            fileira = FileiraGenero(genero, grupos[genero], resumo)
             fileira.clicado.connect(self.selecionar_filme)
             self.layoutFileiras.addWidget(fileira)
             self.fileiras.append(fileira)
+
+        if not filmes:
+            vazio = QLabel("Nenhum filme encontrado.\nTente outro nome ou escolha “Todos” nos gêneros.")
+            vazio.setObjectName("vazio")
+            vazio.setAlignment(Qt.AlignCenter)
+            self.layoutFileiras.addSpacing(60)
+            self.layoutFileiras.addWidget(vazio)
 
         self.layoutFileiras.addStretch()
 
@@ -181,15 +246,13 @@ class Janela(QMainWindow):
                 for c in fileira.cartoes:
                     c.set_selecionado(c.filme_id == self.filmeAtual.id)
 
+    def definir_genero(self, genero):
+        self.generoAtivo = genero
+        self.chips[genero].setChecked(True)
+        self.atualizar_lista()
 
     def filtrar_por_genero(self, genero):
-        filtrados = [f for f in self.filmes if f.genero == genero]
-        self.atualizar_lista(filtrados)
-
-    def buscar_filme(self):
-        texto = self.input.text().lower()
-        filtrados = [f for f in self.filmes if texto in f.titulo.lower()]
-        self.atualizar_lista(filtrados)
+        self.definir_genero(genero)
 
     def filme_selecionado(self):
         return self.filmeAtual
@@ -199,6 +262,14 @@ class Janela(QMainWindow):
         for fileira in self.fileiras:
             for c in fileira.cartoes:
                 c.set_selecionado(c.filme_id == id_filme)
+        if self.filmeAtual is not None:
+            TelaFilme(self, self.filmeAtual).exec()
+
+    def ja_alugou(self, filme):
+        return any(
+            r["usuario"] == self.login and r["filme"] == filme.titulo and r["acao"] == "Aluguel"
+            for r in self.historico.carregar()
+        )
 
     def cadastrar_filme(self):
         dialog = JanelaCadastro()
@@ -208,7 +279,8 @@ class Janela(QMainWindow):
             if not titulo:
                 QMessageBox.warning(self, "Aviso", "Digite um título.")
                 return
-            self.filmes.append(Filme(titulo, genero))
+            sinopse = dialog.campoSinopse.toPlainText().strip()
+            self.filmes.append(Filme(titulo, genero, sinopse=sinopse))
             self.salvar_em_segundo_plano()
             self.atualizar_lista()
 
@@ -218,7 +290,7 @@ class Janela(QMainWindow):
             QMessageBox.warning(self, "Aviso", "Selecione um filme para editar.")
             return
 
-        dialog = JanelaCadastro(filme.titulo, filme.genero)
+        dialog = JanelaCadastro(filme.titulo, filme.genero, filme.sinopse)
         if dialog.exec() == QDialog.Accepted:
             novo_titulo = dialog.campoTitulo.text().strip()
             novo_genero = dialog.campoGenero.currentText()
@@ -227,6 +299,7 @@ class Janela(QMainWindow):
                 return
             filme.titulo = novo_titulo
             filme.genero = novo_genero
+            filme.sinopse = dialog.campoSinopse.toPlainText().strip()
             self.salvar_em_segundo_plano() 
             self.atualizar_lista()
 
@@ -241,6 +314,7 @@ class Janela(QMainWindow):
         )
         if resposta == QMessageBox.Yes:
             self.filmes.remove(filme)
+            self.filmeAtual = None
             self.avaliacoes = [a for a in self.avaliacoes if a.filme_id != filme.id]
             self.salvar_avaliacoes_em_segundo_plano()
             self.salvar_em_segundo_plano() 
@@ -295,12 +369,8 @@ class Janela(QMainWindow):
             QMessageBox.warning(self, "Aviso", "Selecione um filme para avaliar.")
             return
 
-        
-        alugou = any(
-            r["usuario"] == self.login and r["filme"] == filme.titulo and r["acao"] == "Aluguel"
-            for r in self.historico.carregar()
-        )
-        if not alugou:
+
+        if not self.ja_alugou(filme):
             QMessageBox.warning(self, "Não permitido", "Você só pode avaliar filmes que já alugou.")
             return
 
