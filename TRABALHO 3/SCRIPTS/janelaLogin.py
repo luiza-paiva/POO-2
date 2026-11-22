@@ -8,8 +8,7 @@ from janelaPrincipal import Janela
 from dialogos import JanelaCadastroUsuario
 from registroUsuarios import registroUsuarios
 import tema
-
-
+import clienteApi
 
 class JanelaLogin(QMainWindow):
     def __init__(self):
@@ -105,7 +104,12 @@ class JanelaLogin(QMainWindow):
             QMessageBox.warning(self, "Aviso", "Preencha login e senha.")
             return
 
-        tipo = self.registroUsuarios.validar(login, senha)
+        try:
+            tipo = clienteApi.login(login, senha)
+        except clienteApi.ErroApi as erro:
+            QMessageBox.critical(self, "Erro", str(erro))
+            return
+
         if tipo is None:
             QMessageBox.warning(self, "Erro", "Login ou senha inválidos.")
             return
@@ -129,7 +133,12 @@ class JanelaLogin(QMainWindow):
         elif senha != confirmar:
             QMessageBox.warning(self, "Aviso", "As senhas não conferem.")
             return
-        if not self.registroUsuarios.cadastrar(login, senha, "Usuário"):
+        try:
+            criou = clienteApi.cadastrar(login, senha)
+        except clienteApi.ErroApi as erro:
+            QMessageBox.critical(self, "Erro", str(erro))
+            return
+        if not criou:
             QMessageBox.warning(self, "Aviso", "Esse login já existe.")
             return
 

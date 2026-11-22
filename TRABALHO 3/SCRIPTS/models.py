@@ -15,9 +15,11 @@ class Filme:
     genero: str
     status: str = DISPONIVEL
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
-    alugado_por: str = ""      # login de quem alugou
-    data_aluguel: str = ""     # "dd/mm/aaaa HH:MM:SS"
+    alugado_por: str = ""
+    data_aluguel: str = ""
     sinopse: str = ""
+    media: float = 0.0
+    qtd_avaliacoes: int = 0
 
     @property
     def disponivel(self) -> bool:
@@ -36,6 +38,8 @@ class Filme:
             alugado_por=str(dados.get("alugado_por", "")),
             data_aluguel=str(dados.get("data_aluguel", "")),
             sinopse=str(dados.get("sinopse", "")),
+            media=float(dados.get("media", 0) or 0),
+            qtd_avaliacoes=int(dados.get("qtd_avaliacoes", 0) or 0),
         )
 
     def __str__(self) -> str:

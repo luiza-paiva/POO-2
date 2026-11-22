@@ -4,3 +4,4 @@ __pycache__/
 dados/
 .env
 MANUAL.md
+.idea/

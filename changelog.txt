@@ -280,3 +280,46 @@ Alterado
 - tema.py: os estilos dos cards (_QSS_COMUM, _QSS_ESCURO e _QSS_CLARO)
   foram substituídos por ESTILO_APP. O fundo do tema claro foi
   clareado (de 220 para 240).
+
+
+
+------------------------------------------------------------------------------------------------
+ENTREGA FINAL - TRABALHO 3
+------------------------------------------------------------
+
+Adicionado - API (FastAPI, pasta API/)
+- avaliacoes.py: POST /avaliacoes e GET /avaliacoes/{filme_id}. A
+  avaliação (nota de 1 a 5 e comentário) só é aceita se o usuário já
+  alugou o filme; caso contrário, a API responde 403. Avaliar de novo
+  atualiza a avaliação anterior (INSERT ... ON CONFLICT DO UPDATE). A
+  listagem traz usuário, nota, comentário e data/hora, da mais recente
+  para a mais antiga.
+- main.py: o router de avaliações foi registrado na aplicação.
+
+Adicionado - Cliente da API (clienteApi.py)
+- cadastrar: cria conta via POST /usuarios/cadastro (retorna False se
+  o login já existe).
+- listar_filmes: busca o catálogo em GET /filmes.
+- alugar e devolver: chamam POST /alugueis e POST /alugueis/devolucao
+  (função auxiliar _enviar).
+- historico: busca o histórico em GET /alugueis/historico, com filtro
+  opcional por usuário.
+- cadastrar_filme, editar_filme e excluir_filme: chamam POST, PUT e
+  DELETE em /filmes (função auxiliar _requisitar).
+- Todas as funções tratam API fora do ar e levantam ErroApi com a
+  mensagem de erro.
+
+Alterado - Interface (a aplicação passa a usar a API)
+- JanelaLogin: o login e a criação de conta agora são feitos pela API
+  (clienteApi.login e clienteApi.cadastrar), no lugar do
+  registroUsuarios local (usuarios.json). Erros da API aparecem em
+  uma caixa de diálogo.
+- Janela.carregar_filmes_da_api: novo método que carrega o catálogo
+  pela API; substitui a leitura de filmes.json na abertura.
+- Janela.cadastrar_filme: cadastra o filme pela API e recarrega o
+  catálogo.
+- Janela.abrir_alugar: o aluguel é registrado pela API e o catálogo é
+  recarregado.
+- Janela.ja_alugou: verifica o aluguel no histórico da API.
+- Janela.abrir_historico: o histórico vem da API (Admin vê todos;
+  Usuário vê só os seus), no lugar do alugueis.csv.

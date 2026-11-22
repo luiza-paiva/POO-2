@@ -14,6 +14,7 @@ from tarefas_arquivo import GravarDados, CarregarHistorico, ExportarHistorico, G
 import tema
 from cartaoFilme import FileiraGenero
 from telaFilme import TelaFilme
+import clienteApi
 
 class Janela(QMainWindow):
     def __init__(self, login,tipo_usuario="Usuário"):
@@ -26,7 +27,7 @@ class Janela(QMainWindow):
 
         self.repositorio = RepositorioFilmes()
         self.historico = historico()
-        self.filmes = self.repositorio.carregar()
+        self.filmes = self.carregar_filmes_da_api()
         self.repoAvaliacoes = RepositorioAvaliacoes()
         self.avaliacoes = self.repoAvaliacoes.carregar()
         self.tarefas = []
@@ -266,10 +267,11 @@ class Janela(QMainWindow):
             TelaFilme(self, self.filmeAtual).exec()
 
     def ja_alugou(self, filme):
-        return any(
-            r["usuario"] == self.login and r["filme"] == filme.titulo and r["acao"] == "Aluguel"
-            for r in self.historico.carregar()
-        )
+        try:
+            registros = clienteApi.historico(self.login)
+        except clienteApi.ErroApi:
+            return False
+        return any(r["filme"] == filme.titulo and r["acao"] == "Aluguel" for r in registros)
 
     def cadastrar_filme(self):
         dialog = JanelaCadastro()
@@ -280,8 +282,12 @@ class Janela(QMainWindow):
                 QMessageBox.warning(self, "Aviso", "Digite um título.")
                 return
             sinopse = dialog.campoSinopse.toPlainText().strip()
-            self.filmes.append(Filme(titulo, genero, sinopse=sinopse))
-            self.salvar_em_segundo_plano()
+            try:
+                clienteApi.cadastrar_filme(titulo, genero, sinopse)
+            except clienteApi.ErroApi as erro:
+                QMessageBox.warning(self, "Aviso", str(erro))
+                return
+            self.filmes = self.carregar_filmes_da_api()
             self.atualizar_lista()
 
     def editar_filme(self):
@@ -332,10 +338,12 @@ class Janela(QMainWindow):
 
         dialog = JanelaAlugar(filme.titulo, filme.genero)
         if dialog.exec() == QDialog.Accepted:
-            filme.status = ALUGADO
-            filme.alugado_por = self.login
-            filme.data_aluguel = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-            self.salvar_em_segundo_plano((self.login, filme.titulo, "Aluguel"))
+            try:
+                clienteApi.alugar(self.login, filme.id)
+            except clienteApi.ErroApi as erro:
+                QMessageBox.warning(self, "Aviso", str(erro))
+                return
+            self.filmes = self.carregar_filmes_da_api()
             self.atualizar_lista()
             QMessageBox.information(self, "Sucesso", f"'{filme.titulo}' alugado com sucesso!")
 
@@ -423,14 +431,16 @@ class Janela(QMainWindow):
         tarefa.finished.connect(lambda t=tarefa: self.tarefas.remove(t) if t in self.tarefas else None)
         self.tarefas.append(tarefa)
         tarefa.start()
-        
+
     def abrir_historico(self):
+        usuario = None if self.tipo_usuario == "Admin" else self.login
+        try:
+            registros = clienteApi.historico(usuario)
+        except clienteApi.ErroApi as erro:
+            QMessageBox.critical(self, "Erro", str(erro))
+            return
         self.dialogHistorico = JanelaHistorico()
-        tarefa = CarregarHistorico(self.historico)
-        tarefa.carregado.connect(self.mostrar_historico)
-        tarefa.finished.connect(lambda t=tarefa: self.tarefas.remove(t) if t in self.tarefas else None)
-        self.tarefas.append(tarefa)
-        tarefa.start()
+        self.dialogHistorico.preencher(registros)
         self.dialogHistorico.exec()
 
     def mostrar_historico(self, registros):
@@ -490,3 +500,11 @@ class Janela(QMainWindow):
             "F1  -  Mostrar esta lista"
         )
         QMessageBox.information(self, "Atalhos de teclado", texto)
+
+    def carregar_filmes_da_api(self):
+        try:
+            dados = clienteApi.listar_filmes()
+        except clienteApi.ErroApi as erro:
+            QMessageBox.critical(self, "Erro", str(erro))
+            return []
+        return [Filme.from_dict(d) for d in dados]

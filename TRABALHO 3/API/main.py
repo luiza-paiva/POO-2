@@ -5,13 +5,13 @@ from fastapi import FastAPI
 import filmes
 import alugueis
 import usuarios
+import avaliacoes
 from db import driver, pg, preparar_neo4j
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     preparar_neo4j()
-    # Administrador padrão, criado só se ainda não existir nenhum
     with pg() as conn:
         existe = conn.execute(
             "SELECT 1 FROM usuarios WHERE tipo = 'Admin' LIMIT 1"
@@ -26,6 +26,7 @@ app = FastAPI(title="Locadora API", lifespan=lifespan)
 app.include_router(usuarios.router)
 app.include_router(filmes.router)
 app.include_router(alugueis.router)
+app.include_router(avaliacoes.router)
 
 
 @app.get("/saude")
