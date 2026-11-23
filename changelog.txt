@@ -392,3 +392,15 @@ Alterado - Interface
   com os mesmos atalhos (Ctrl+R, Ctrl+D, Ctrl+B, Ctrl+N, Ctrl+E e
   Delete), e também na TelaFilme. A barra ficou com Ver Histórico,
   Exportar Histórico (Admin), Alternar tema, Sair da conta e Atalhos.
+
+Adicionado - API
+- posters.py: GET /posters/{filme_id}, que devolve o pôster do filme a
+  partir da pasta API/posters (404 se não houver).
+
+Adicionado - Cliente
+- clienteApi.baixar_poster: baixa o pôster pela API.
+- BaixarPosters (tarefas_arquivo.py): QThread que baixa em segundo plano
+  os pôsteres que faltam e guarda em dados/cache_posters.
+- cartaoFilme.caminho_poster: passa a procurar também no cache.
+- Janela.baixar_posters: dispara o download ao abrir, recarregar e
+  sincronizar.

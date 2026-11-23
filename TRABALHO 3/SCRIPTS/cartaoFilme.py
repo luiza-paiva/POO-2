@@ -14,6 +14,7 @@ ALTURA_POSTER = 250
 ALTURA_CARTAO = 352
 ESPACO_CARTOES = 14
 PASTA_POSTERS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "posters")
+PASTA_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dados", "cache_posters")
 
 CORES_GENERO = {
     "romance": "#b83b5e",
@@ -34,11 +35,12 @@ def nome_arquivo_poster(titulo):
 
 
 def caminho_poster(filme):
-    for nome in (nome_arquivo_poster(filme.titulo), filme.id):
-        for ext in EXTENSOES:
-            caminho = os.path.join(PASTA_POSTERS, nome + ext)
-            if os.path.exists(caminho):
-                return caminho
+    for pasta in (PASTA_POSTERS, PASTA_CACHE):
+        for nome in (nome_arquivo_poster(filme.titulo), filme.id):
+            for ext in EXTENSOES:
+                caminho = os.path.join(pasta, nome + ext)
+                if os.path.exists(caminho):
+                    return caminho
     return ""
 
 

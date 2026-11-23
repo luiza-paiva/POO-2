@@ -1,13 +1,30 @@
+import os
 from urllib.parse import quote
 
 import requests
 
-URL_BASE = "http://localhost:8000"
+# Endereço do servidor na rede Tailscale. Para testar localmente, defina
+# a variável de ambiente LOCADORA_API (ex.: http://localhost:8000).
+SERVIDOR_PADRAO = "http://100.122.141.42:8000"
+URL_BASE = os.environ.get("LOCADORA_API", SERVIDOR_PADRAO).rstrip("/")
 TEMPO_LIMITE = 5
 
+TIPOS_IMAGEM = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
 
 class ErroApi(Exception):
     pass
+
+def baixar_poster(filme_id):
+    try:
+        resposta = requests.get(f"{URL_BASE}/posters/{filme_id}", timeout=TEMPO_LIMITE)
+    except requests.exceptions.RequestException:
+        raise ErroApi("API fora do ar")
+    if resposta.status_code == 404:
+        return None
+    if resposta.status_code != 200:
+        raise ErroApi(_detalhe(resposta))
+    tipo = resposta.headers.get("Content-Type", "").split(";")[0]
+    return resposta.content, TIPOS_IMAGEM.get(tipo, ".jpg")
 
 
 def _detalhe(resposta):

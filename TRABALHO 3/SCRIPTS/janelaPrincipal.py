@@ -7,9 +7,9 @@ from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt, QTimer
 from models import Filme, GENEROS
 from dialogos import JanelaAlugar, JanelaCadastro, JanelaHistorico, JanelaAvaliar
-from tarefas_arquivo import ExportarHistorico
+from tarefas_arquivo import ExportarHistorico, BaixarPosters
 import tema
-from cartaoFilme import FileiraGenero
+from cartaoFilme import FileiraGenero, caminho_poster
 from telaFilme import TelaFilme
 import clienteApi
 
@@ -250,6 +250,16 @@ class Janela(QMainWindow):
             for fileira in self.fileiras:
                 for c in fileira.cartoes:
                     c.set_selecionado(c.filme_id == self.filmeAtual.id)
+
+    def baixar_posters(self):
+        pendentes = [f for f in self.filmes if not caminho_poster(f)]
+        if not pendentes:
+            return
+        tarefa = BaixarPosters(pendentes)
+        tarefa.baixado.connect(self.atualizar_lista)
+        tarefa.finished.connect(self.exportacao_finalizada)
+        self.tarefas.append(tarefa)
+        tarefa.start()
 
     def definir_genero(self, genero):
         self.generoAtivo = genero

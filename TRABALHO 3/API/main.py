@@ -6,6 +6,7 @@ import filmes
 import alugueis
 import usuarios
 import avaliacoes
+import posters
 from db import driver, pg, preparar_neo4j
 
 
@@ -27,6 +28,7 @@ app.include_router(usuarios.router)
 app.include_router(filmes.router)
 app.include_router(alugueis.router)
 app.include_router(avaliacoes.router)
+app.include_router(posters.router)
 
 
 @app.get("/saude")

@@ -1,4 +1,33 @@
+import os
 from PySide6.QtCore import QThread, Signal
+
+import clienteApi
+from cartaoFilme import PASTA_CACHE, caminho_poster
+
+class BaixarPosters(QThread):
+    baixado = Signal()
+
+    def __init__(self, filmes):
+        super().__init__()
+        self.filmes = filmes
+
+    def run(self):
+        novo = False
+        os.makedirs(PASTA_CACHE, exist_ok=True)
+        for filme in self.filmes:
+            try:
+                resultado = clienteApi.baixar_poster(filme.id)
+            except clienteApi.ErroApi:
+                break
+            if resultado is None:
+                continue
+            dados, ext = resultado
+            with open(os.path.join(PASTA_CACHE, filme.id + ext), "wb") as f:
+                f.write(dados)
+            novo = True
+        if novo:
+            self.baixado.emit()
+
 
 class ExportarHistorico(QThread):
     exportado = Signal(str)
