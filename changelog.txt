@@ -376,3 +376,19 @@ Removido
 - JanelaLogin: deixou de criar o registroUsuarios.
 - tema.py: passou a definir o próprio PASTA_DADOS em vez de importar
   do repositorio.py.
+
+Corrigido
+- dialogos.py: adicionado o import de QSpinBox. Sem ele, JanelaCadastro
+  lançava NameError ao abrir, e cadastrar e editar filme não
+  funcionavam.
+- Janela.cadastrar_filme e Janela.editar_filme: passam a enviar o
+  número de cópias à API (antes o valor era lido do diálogo, mas não
+  era enviado, e o filme ficava sempre com 1 cópia).
+
+Alterado - Interface
+- Janela (barra de ferramentas): removidos os botões Alugar Filme,
+  Devolver Filme e Avaliar Filme (usuário) e Cadastrar Filme, Editar
+  Filme e Excluir Filme (Admin). As ações continuam no menu Filme,
+  com os mesmos atalhos (Ctrl+R, Ctrl+D, Ctrl+B, Ctrl+N, Ctrl+E e
+  Delete), e também na TelaFilme. A barra ficou com Ver Histórico,
+  Exportar Histórico (Admin), Alternar tema, Sair da conta e Atalhos.
