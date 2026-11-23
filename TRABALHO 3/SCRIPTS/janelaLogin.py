@@ -6,7 +6,6 @@ from PySide6.QtWidgets import (
 )
 from janelaPrincipal import Janela
 from dialogos import JanelaCadastroUsuario
-from registroUsuarios import registroUsuarios
 import tema
 import clienteApi
 
@@ -16,7 +15,6 @@ class JanelaLogin(QMainWindow):
         self.setWindowTitle("Locadora de Filmes")
         self.resize(420, 560)
         self.setMinimumSize(380, 520)
-        self.registroUsuarios = registroUsuarios(None)
 
         icone = QLabel("🎬")
         icone.setAlignment(Qt.AlignCenter)

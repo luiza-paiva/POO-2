@@ -1,40 +1,4 @@
-# tarefas_arquivo.py
 from PySide6.QtCore import QThread, Signal
-
-
-class GravarDados(QThread):
-    concluida = Signal()
-    erro = Signal(str)
-
-    def __init__(self, repositorio, filmes, historico=None, registro=None):
-        super().__init__()
-        self.repositorio = repositorio
-        self.filmes = list(filmes)
-        self.historico = historico
-        self.registro = registro 
-
-    def run(self):
-        try:
-            self.repositorio.salvar(self.filmes)
-            if self.historico and self.registro:
-                self.historico.registrar(*self.registro)
-            self.concluida.emit()
-        except Exception as e:
-            self.erro.emit(str(e))
-            
-class CarregarHistorico(QThread):
-    carregado = Signal(list)
-    erro = Signal(str)
-
-    def __init__(self, historico):
-        super().__init__()
-        self.historico = historico
-
-    def run(self):
-        try:
-            self.carregado.emit(self.historico.carregar())
-        except Exception as e:
-            self.erro.emit(str(e))
 
 class ExportarHistorico(QThread):
     exportado = Signal(str)
@@ -51,20 +15,5 @@ class ExportarHistorico(QThread):
                 for r in self.registros:
                     f.write(f"{r['data_hora']} - {r['usuario']} - {r['filme']} - {r['acao']}\n")
             self.exportado.emit(self.caminho)
-        except Exception as e:
-            self.erro.emit(str(e))
-
-
-class GravarAvaliacoes(QThread):
-    erro = Signal(str)
-
-    def __init__(self, repositorio, avaliacoes):
-        super().__init__()
-        self.repositorio = repositorio
-        self.avaliacoes = list(avaliacoes)
-
-    def run(self):
-        try:
-            self.repositorio.salvar(self.avaliacoes)
         except Exception as e:
             self.erro.emit(str(e))

@@ -6,6 +6,8 @@ from PySide6.QtWidgets import (
     QWidget, QFrame
 )
 
+import clienteApi
+from models import Avaliacao
 from cartaoFilme import gerar_poster, CORES_GENERO, COR_ESTRELA
 
 LARGURA_POSTER = 250
@@ -132,9 +134,22 @@ class TelaFilme(QDialog):
         botao.clicked.connect(funcao)
         return botao
 
+    def _buscar_avaliacoes(self, filme_id):
+        try:
+            dados = clienteApi.listar_avaliacoes(filme_id)
+        except clienteApi.ErroApi:
+            return []
+        return [Avaliacao(filme_id, d["usuario"], d["nota"],
+                          d.get("comentario", ""), d.get("data_hora", ""))
+                for d in dados]
+
     def atualizar(self):
-        f = self.filme
         j = self.janela
+        # A janela principal troca os objetos Filme a cada recarga da API.
+        if j.filmeAtual is not None:
+            self.filme = j.filmeAtual
+        f = self.filme
+
         self.setWindowTitle(f.titulo)
         self.titulo.setText(f.titulo)
         self.poster.setPixmap(gerar_poster(f, LARGURA_POSTER, ALTURA_POSTER, 14))
@@ -143,14 +158,13 @@ class TelaFilme(QDialog):
         self.etGenero.setStyleSheet(_estilo_etiqueta(CORES_GENERO.get(f.genero, "#555555")))
 
         if f.disponivel:
-            self.etStatus.setText("Disponível")
+            self.etStatus.setText(f"Disponível: {f.copias_disponiveis} de {f.copias}")
             self.etStatus.setStyleSheet(_estilo_etiqueta("#1e8c50"))
         else:
-            quem = "você" if f.alugado_por == j.login else (f.alugado_por or "outro usuário")
-            self.etStatus.setText(f"Alugado por {quem}")
+            self.etStatus.setText("Indisponível")
             self.etStatus.setStyleSheet(_estilo_etiqueta("#b9372d"))
 
-        avaliacoes = [a for a in j.avaliacoes if a.filme_id == f.id]
+        avaliacoes = self._buscar_avaliacoes(f.id)
         if avaliacoes:
             media = sum(a.nota for a in avaliacoes) / len(avaliacoes)
             self.notaGrande.setText(
@@ -185,7 +199,8 @@ class TelaFilme(QDialog):
                 item.widget().deleteLater()
 
         self.secaoAvaliacoes.setVisible(bool(avaliacoes))
-        for a in reversed(avaliacoes):
+        # A API já devolve da avaliação mais recente para a mais antiga.
+        for a in avaliacoes:
             nome = "Você" if a.usuario == self.janela.login else escape(a.usuario)
             estrelas = (f"<span style='color:{COR_ESTRELA}'>{'★' * a.nota}</span>"
                         f"<span style='color:#8a8a8a'>{'★' * (5 - a.nota)}</span>")
@@ -204,11 +219,11 @@ class TelaFilme(QDialog):
     def _atualizar_botoes_usuario(self, avaliacoes):
         f, j = self.filme, self.janela
 
-        if f.disponivel:
-            self.botaoAlugar.setText("Alugar filme")
-            self.botaoAlugar.setEnabled(True)
-        elif f.alugado_por in ("", j.login):
+        if f.alugado_por == j.login:
             self.botaoAlugar.setText("Devolver filme")
+            self.botaoAlugar.setEnabled(True)
+        elif f.disponivel:
+            self.botaoAlugar.setText("Alugar filme")
             self.botaoAlugar.setEnabled(True)
         else:
             self.botaoAlugar.setText("Indisponível")
@@ -221,10 +236,10 @@ class TelaFilme(QDialog):
         self.dica.setText("" if alugou else "Alugue este filme para poder avaliá-lo.")
 
     def _alugar_ou_devolver(self):
-        if self.filme.disponivel:
-            self.janela.abrir_alugar()
-        else:
+        if self.filme.alugado_por == self.janela.login:
             self.janela.devolver_filme()
+        else:
+            self.janela.abrir_alugar()
         self.atualizar()
 
     def _avaliar(self):
@@ -237,7 +252,7 @@ class TelaFilme(QDialog):
 
     def _excluir(self):
         self.janela.excluir_filme()
-        if self.filme in self.janela.filmes:
-            self.atualizar()
-        else:
+        if self.janela.filmeAtual is None:
             self.accept()
+        else:
+            self.atualizar()

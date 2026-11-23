@@ -20,6 +20,8 @@ class Filme:
     sinopse: str = ""
     media: float = 0.0
     qtd_avaliacoes: int = 0
+    copias: int = 1
+    copias_disponiveis: int = 1
 
     @property
     def disponivel(self) -> bool:
@@ -40,6 +42,8 @@ class Filme:
             sinopse=str(dados.get("sinopse", "")),
             media=float(dados.get("media", 0) or 0),
             qtd_avaliacoes=int(dados.get("qtd_avaliacoes", 0) or 0),
+            copias=int(dados.get("copias", 1) or 1),
+            copias_disponiveis=int(dados.get("copias_disponiveis", dados.get("copias", 1)) or 0),
         )
 
     def __str__(self) -> str:

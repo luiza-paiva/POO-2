@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QListWidget,
-    QDialog, QFormLayout, QComboBox, QPlainTextEdit, QCheckBox, QHBoxLayout
+    QDialog, QFormLayout, QComboBox, QPlainTextEdit, QCheckBox, QHBoxLayout, QSpinBox
 )
 from PySide6.QtGui import QFont
 from PySide6.QtCore import Qt, Signal
@@ -30,7 +30,7 @@ class JanelaAlugar(QDialog):
 
 
 class JanelaCadastro(QDialog):
-    def __init__(self, titulo="", genero="", sinopse=""):
+    def __init__(self, titulo="", genero="", sinopse="", copias=1):
         super().__init__()
         self.setWindowTitle("Cadastrar/Editar Filme")
         self.resize(420, 330)
@@ -38,6 +38,11 @@ class JanelaCadastro(QDialog):
         self.campoTitulo = QLineEdit(titulo)
         self.campoGenero = QComboBox()
         self.campoGenero.addItems(["romance", "ação", "drama", "terror", "ficção científica"])
+
+        self.campoCopias = QSpinBox()
+        self.campoCopias.setRange(1, 99)
+        self.campoCopias.setValue(copias)
+
         if genero:
             self.campoGenero.setCurrentText(genero)
 
@@ -50,6 +55,7 @@ class JanelaCadastro(QDialog):
         layout = QFormLayout()
         layout.addRow("Título:", self.campoTitulo)
         layout.addRow("Gênero:", self.campoGenero)
+        layout.addRow("Cópias:", self.campoCopias)
         layout.addRow("Sinopse:", self.campoSinopse)
         layout.addRow(self.botaoSalvar)
         self.setLayout(layout)

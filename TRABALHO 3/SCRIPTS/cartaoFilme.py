@@ -109,7 +109,7 @@ class CartaoFilme(QFrame):
 
         self.selo = QLabel(self.imagem)
         self.selo.move(8, 8)
-        self.atualizar_status(filme.disponivel)
+        self.atualizar_status(filme)
 
         self.titulo = QLabel(filme.titulo)
         self.titulo.setObjectName("cartaoTitulo")
@@ -123,9 +123,13 @@ class CartaoFilme(QFrame):
         layout.addWidget(self.nota)
         layout.addStretch()
 
-    def atualizar_status(self, disponivel):
+    def atualizar_status(self, filme):
+        disponivel = filme.disponivel
         cor = "rgba(30, 140, 80, 235)" if disponivel else "rgba(185, 55, 45, 235)"
-        self.selo.setText("Disponível" if disponivel else "Alugado")
+        if disponivel:
+            self.selo.setText(f"Disponível {filme.copias_disponiveis}/{filme.copias}")
+        else:
+            self.selo.setText("Indisponível")
         self.selo.setStyleSheet(
             f"background: {cor}; color: white; font-size: 11px; font-weight: bold;"
             "border-radius: 9px; padding: 3px 9px;")

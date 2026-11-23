@@ -5,8 +5,6 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPalette, QColor
 from PySide6.QtWidgets import QApplication
 
-from repositorio import PASTA_DADOS
-
 from string import Template
 
 ESTILO = Template("""
@@ -82,6 +80,7 @@ CORES_ESCURO = {
     "destaque_hover": "#4a97e8",
 }
 
+PASTA_DADOS = Path(__file__).resolve().parent / "dados"
 CAMINHO_CONFIG = PASTA_DADOS / "config.json"
 
 

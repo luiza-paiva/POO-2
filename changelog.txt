@@ -296,11 +296,49 @@ Adicionado - API
 - filmes.py: sinopses dos 15 filmes iniciais; o semear preenche a
   sinopse dos filmes que ainda estão sem.
 - esquema.sql: coluna sinopse na tabela filmes.
+- filmes.py: GET /filmes/recomendados/{login}, recomendação feita no
+  Neo4j: filmes alugados por quem alugou os mesmos filmes que o
+  usuário (relação ALUGOU), completados com filmes dos gêneros que ele
+  já alugou (relação DO_GENERO). Só sugere filmes que o usuário ainda
+  não alugou. Os dados completos vêm do PostgreSQL. Se o Neo4j estiver
+  fora do ar, devolve lista vazia.
+- filmes.py: funções _consultar_filmes (listagem com cópias, média e
+  avaliações, usada por GET /filmes e pelas recomendações) e
+  _ids_recomendados (consultas Cypher).
+- filmes.py: campo copias no cadastro, na edição e na listagem. A
+  listagem traz copias, copias_disponiveis e status (Disponível
+  enquanto houver cópia). A edição recusa (409) reduzir as cópias
+  abaixo do número de cópias alugadas no momento.
+- filmes.py: GET /filmes aceita o parâmetro login; alugado_por passa a
+  indicar se aquele usuário está com uma cópia do filme.
+- alugueis.py: alugar confere se há cópia disponível (409 sem cópias)
+  e impede o mesmo usuário de alugar duas cópias do mesmo filme. A
+  linha do filme é travada (FOR UPDATE) para que pedidos simultâneos
+  não aluguem além do número de cópias.
+- alugueis.py: devolver localiza o aluguel ativo do próprio usuário
+  (409 se ele não alugou o filme).
+- esquema.sql: coluna copias (padrão 1, mínimo 1) na tabela filmes. O
+  índice ux_aluguel_ativo passou a valer por usuário e filme, em vez
+  de só por filme.
 
 Adicionado - Cliente da API (clienteApi.py)
-- cadastrar, listar_filmes, alugar, devolver, historico,
-  cadastrar_filme, editar_filme, excluir_filme, avaliar e
-  listar_avaliacoes. Todas tratam API fora do ar (ErroApi).
+- login, cadastrar, listar_filmes, alugar, devolver, historico,
+  cadastrar_filme, editar_filme, excluir_filme, avaliar,
+  listar_avaliacoes e listar_recomendados. Todas tratam API fora do ar
+  (ErroApi).
+- listar_filmes recebe o login do usuário; cadastrar_filme e
+  editar_filme enviam o número de cópias.
+
+Adicionado - Interface
+- Janela.carregar_recomendados e fileira "Recomendados para você" no
+  topo da tela principal, só para usuário comum e quando não há busca
+  nem filtro de gênero ativos. Some se não houver sugestões.
+- Janela.sincronizar: um timer (INTERVALO_SINCRONIZACAO_MS, 5 s) busca
+  o catálogo na API e só redesenha se algo mudou. Atualiza a TelaFilme
+  aberta e a fecha se o filme foi excluído por outro usuário.
+- JanelaCadastro (dialogos.py): campo Cópias (1 a 99), usado ao
+  cadastrar e ao editar um filme.
+- Filme (models.py): novos campos copias e copias_disponiveis.
 
 Alterado - Interface (o app passa a usar a API em vez de arquivos)
 - JanelaLogin: login e criação de conta pela API.
@@ -312,9 +350,29 @@ Alterado - Interface (o app passa a usar a API em vez de arquivos)
 - Janela.exportar_historico: exporta o histórico vindo da API.
 - TelaFilme: as avaliações vêm da API (listar_avaliacoes).
 - Filme (models.py): novos campos media e qtd_avaliacoes.
+- CartaoFilme.atualizar_status: recebe o filme e mostra "Disponível
+  X/Y" ou "Indisponível" no selo.
+- TelaFilme.atualizar: a etiqueta mostra "Disponível: X de Y" ou
+  "Indisponível" e deixa de mostrar quem alugou.
+- TelaFilme._atualizar_botoes_usuario e _alugar_ou_devolver: o botão
+  vira Devolver quando o próprio usuário está com uma cópia; senão é
+  Alugar, ou Indisponível (desabilitado) se não há cópias.
+- Janela.abrir_alugar e Janela.devolver_filme: mensagens e validações
+  ajustadas ao controle por cópias (devolver exige que o usuário
+  tenha alugado o filme).
 
 Removido
 - Uso local de filmes.json, alugueis.csv, avaliacoes.json e
-  usuarios.json (RepositorioFilmes, RepositorioAvaliacoes, historico e
-  registroUsuarios deixaram de ser usados). Os arquivos continuam para
-  pôsteres, tema e exportação em .txt.
+  usuarios.json. Continuam em arquivo apenas os pôsteres, a
+  preferência de tema (config.json) e a exportação do histórico em
+  .txt.
+- Arquivos do cliente que ficaram sem uso: registroUsuarios.py,
+  historicoAlgueis.py, repositorio.py (com RepositorioFilmes,
+  RepositorioAvaliacoes e as sinopses, que agora ficam na API),
+  conexaoBanco.py (acesso direto ao Neo4j, pois o cliente só fala com
+  a API) e teste.py.
+- tarefas_arquivo.py: classes GravarDados, CarregarHistorico e
+  GravarAvaliacoes. Ficou só ExportarHistorico.
+- JanelaLogin: deixou de criar o registroUsuarios.
+- tema.py: passou a definir o próprio PASTA_DADOS em vez de importar
+  do repositorio.py.

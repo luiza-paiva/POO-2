@@ -1,23 +1,23 @@
-from datetime import datetime
 from PySide6.QtWidgets import (
     QWidget, QMainWindow, QToolBar, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QHBoxLayout, QDialog, QButtonGroup,
     QMessageBox, QFileDialog, QStyle, QScrollArea
 )
 from PySide6.QtGui import QAction
-from PySide6.QtCore import Qt
-from models import Filme, Avaliacao, ALUGADO, DISPONIVEL, GENEROS
-from repositorio import RepositorioFilmes, RepositorioAvaliacoes
-from historicoAlgueis import historico
+from PySide6.QtCore import Qt, QTimer
+from models import Filme, GENEROS
 from dialogos import JanelaAlugar, JanelaCadastro, JanelaHistorico, JanelaAvaliar
-from tarefas_arquivo import GravarDados, CarregarHistorico, ExportarHistorico, GravarAvaliacoes
+from tarefas_arquivo import ExportarHistorico
 import tema
 from cartaoFilme import FileiraGenero
 from telaFilme import TelaFilme
 import clienteApi
 
+INTERVALO_SINCRONIZACAO_MS = 5000
+
+
 class Janela(QMainWindow):
-    def __init__(self, login,tipo_usuario="Usuário"):
+    def __init__(self, login, tipo_usuario="Usuário"):
         super().__init__()
         self.tipo_usuario = tipo_usuario
         self.login = login
@@ -25,12 +25,16 @@ class Janela(QMainWindow):
         self.resize(1020, 700)
         self.setMinimumSize(760, 520)
 
-        self.repositorio = RepositorioFilmes()
-        self.historico = historico()
-        self.filmes = self.carregar_filmes_da_api()
-        self.repoAvaliacoes = RepositorioAvaliacoes()
-        self.avaliacoes = self.repoAvaliacoes.carregar()
+        self.filmeAtual = None
+        self.fileiras = []
+        self.generoAtivo = None
+        self.telaFilme = None
         self.tarefas = []
+        self._sincronizando = False
+        self.idsRecomendados = []
+
+        self.filmes = self.carregar_filmes_da_api() or []
+        self.carregar_recomendados()
 
         self.menuGenero = self.menuBar().addMenu("Gênero")
         acaoTodos = QAction("Todos os gêneros", self)
@@ -40,7 +44,6 @@ class Janela(QMainWindow):
             acao = QAction(genero, self)
             acao.triggered.connect(lambda checked, g=genero: self.filtrar_por_genero(g))
             self.menuGenero.addAction(acao)
-
 
         self.menuFilme = self.menuBar().addMenu("Filme")
         self.barra = QToolBar()
@@ -68,10 +71,6 @@ class Janela(QMainWindow):
             self.menuFilme.addAction(self.acaoEditar)
             self.menuFilme.addAction(self.acaoExcluir)
 
-            self.barra.addAction(self.acaoCadastrar)
-            self.barra.addAction(self.acaoEditar)
-            self.barra.addAction(self.acaoExcluir)
-
         else:
             self.acaoAlugar = QAction("Alugar Filme", self)
             self.acaoAlugar.triggered.connect(self.abrir_alugar)
@@ -92,10 +91,6 @@ class Janela(QMainWindow):
             self.menuFilme.addAction(self.acaoAlugar)
             self.menuFilme.addAction(self.acaoDevolver)
             self.menuFilme.addAction(self.acaoAvaliar)
-
-            self.barra.addAction(self.acaoAlugar)
-            self.barra.addAction(self.acaoDevolver)
-            self.barra.addAction(self.acaoAvaliar)
 
         self.acaoHistorico = QAction("Ver Histórico", self)
         self.acaoHistorico.setShortcut("Ctrl+H")
@@ -132,10 +127,6 @@ class Janela(QMainWindow):
         self.acaoAtalhos.triggered.connect(self.mostrar_atalhos)
         self.menuFilme.addAction(self.acaoAtalhos)
         self.barra.addAction(self.acaoAtalhos)
-
-        self.filmeAtual = None
-        self.fileiras = []
-        self.generoAtivo = None
 
         saudacao = QLabel(f"Olá, {self.login}")
         saudacao.setObjectName("saudacao")
@@ -202,6 +193,13 @@ class Janela(QMainWindow):
 
         self.atualizar_lista()
 
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self.sincronizar)
+        self.timer.start(INTERVALO_SINCRONIZACAO_MS)
+
+    # ------------------------------------------------------------------
+    # Lista de filmes
+    # ------------------------------------------------------------------
     def atualizar_lista(self, *_):
         texto = self.input.text().strip().lower()
         filmes = [f for f in self.filmes
@@ -217,10 +215,16 @@ class Janela(QMainWindow):
                 widget.deleteLater()
         self.fileiras = []
 
-        notas = {}
-        for a in self.avaliacoes:
-            notas.setdefault(a.filme_id, []).append(a.nota)
-        resumo = {fid: (sum(v) / len(v), len(v)) for fid, v in notas.items()}
+        resumo = {f.id: (f.media, f.qtd_avaliacoes) for f in self.filmes if f.qtd_avaliacoes}
+
+        if self.generoAtivo is None and not texto:
+            porId = {f.id: f for f in self.filmes}
+            recomendados = [porId[i] for i in self.idsRecomendados if i in porId]
+            if recomendados:
+                fileira = FileiraGenero("Recomendados para você", recomendados, resumo)
+                fileira.clicado.connect(self.selecionar_filme)
+                self.layoutFileiras.addWidget(fileira)
+                self.fileiras.append(fileira)
 
         grupos = {}
         for f in filmes:
@@ -264,7 +268,68 @@ class Janela(QMainWindow):
             for c in fileira.cartoes:
                 c.set_selecionado(c.filme_id == id_filme)
         if self.filmeAtual is not None:
-            TelaFilme(self, self.filmeAtual).exec()
+            self.telaFilme = TelaFilme(self, self.filmeAtual)
+            self.telaFilme.exec()
+            self.telaFilme = None
+
+    # ------------------------------------------------------------------
+    # Comunicação com a API
+    # ------------------------------------------------------------------
+    def carregar_filmes_da_api(self):
+        """Devolve a lista de filmes, ou None se a API falhar."""
+        try:
+            dados = clienteApi.listar_filmes(self.login)
+        except clienteApi.ErroApi as erro:
+            QMessageBox.critical(self, "Erro", str(erro))
+            return None
+        return [Filme.from_dict(d) for d in dados]
+
+    def carregar_recomendados(self):
+        """Busca na API os ids dos filmes recomendados (só para usuário comum)."""
+        if self.tipo_usuario == "Admin":
+            self.idsRecomendados = []
+            return
+        try:
+            dados = clienteApi.listar_recomendados(self.login)
+        except clienteApi.ErroApi:
+            self.idsRecomendados = []  # silencioso: recomendação é opcional
+            return
+        self.idsRecomendados = [d["id"] for d in dados]
+
+    def recarregar(self):
+        novos = self.carregar_filmes_da_api()
+        if novos is None:
+            return
+        self.filmes = novos
+        self.carregar_recomendados()
+        if self.filmeAtual is not None:
+            self.filmeAtual = next((f for f in self.filmes if f.id == self.filmeAtual.id), None)
+        self.atualizar_lista()
+
+    def sincronizar(self):
+        """Chamado pelo timer: busca o catálogo e só redesenha se algo mudou."""
+        if self._sincronizando:
+            return
+        self._sincronizando = True
+        try:
+            try:
+                dados = clienteApi.listar_filmes(self.login)
+            except clienteApi.ErroApi:
+                return  # silencioso: sem caixa de erro a cada ciclo
+            novos = [Filme.from_dict(d) for d in dados]
+            if [f.to_dict() for f in novos] == [f.to_dict() for f in self.filmes]:
+                return
+            self.filmes = novos
+            if self.filmeAtual is not None:
+                self.filmeAtual = next((f for f in novos if f.id == self.filmeAtual.id), None)
+            self.atualizar_lista()
+            if self.telaFilme is not None:
+                if self.filmeAtual is None:
+                    self.telaFilme.accept()  # filme excluído por outro usuário
+                else:
+                    self.telaFilme.atualizar()
+        finally:
+            self._sincronizando = False
 
     def ja_alugou(self, filme):
         try:
@@ -273,6 +338,9 @@ class Janela(QMainWindow):
             return False
         return any(r["filme"] == filme.titulo and r["acao"] == "Aluguel" for r in registros)
 
+    # ------------------------------------------------------------------
+    # Ações sobre filmes
+    # ------------------------------------------------------------------
     def cadastrar_filme(self):
         dialog = JanelaCadastro()
         if dialog.exec() == QDialog.Accepted:
@@ -282,13 +350,13 @@ class Janela(QMainWindow):
                 QMessageBox.warning(self, "Aviso", "Digite um título.")
                 return
             sinopse = dialog.campoSinopse.toPlainText().strip()
+            copias = dialog.campoCopias.value()
             try:
-                clienteApi.cadastrar_filme(titulo, genero, sinopse)
+                clienteApi.cadastrar_filme(titulo, genero, sinopse, copias)
             except clienteApi.ErroApi as erro:
                 QMessageBox.warning(self, "Aviso", str(erro))
                 return
-            self.filmes = self.carregar_filmes_da_api()
-            self.atualizar_lista()
+            self.recarregar()
 
     def editar_filme(self):
         filme = self.filme_selecionado()
@@ -296,18 +364,21 @@ class Janela(QMainWindow):
             QMessageBox.warning(self, "Aviso", "Selecione um filme para editar.")
             return
 
-        dialog = JanelaCadastro(filme.titulo, filme.genero, filme.sinopse)
+        dialog = JanelaCadastro(filme.titulo, filme.genero, filme.sinopse, filme.copias)
         if dialog.exec() == QDialog.Accepted:
             novo_titulo = dialog.campoTitulo.text().strip()
             novo_genero = dialog.campoGenero.currentText()
             if not novo_titulo:
                 QMessageBox.warning(self, "Aviso", "Digite um título.")
                 return
-            filme.titulo = novo_titulo
-            filme.genero = novo_genero
-            filme.sinopse = dialog.campoSinopse.toPlainText().strip()
-            self.salvar_em_segundo_plano() 
-            self.atualizar_lista()
+            sinopse = dialog.campoSinopse.toPlainText().strip()
+            copias = dialog.campoCopias.value()
+            try:
+                clienteApi.editar_filme(filme.id, novo_titulo, novo_genero, sinopse, copias)
+            except clienteApi.ErroApi as erro:
+                QMessageBox.warning(self, "Aviso", str(erro))
+                return
+            self.recarregar()
 
     def excluir_filme(self):
         filme = self.filme_selecionado()
@@ -319,12 +390,13 @@ class Janela(QMainWindow):
             self, "Confirmar exclusão", f"Excluir '{filme.titulo}'?"
         )
         if resposta == QMessageBox.Yes:
-            self.filmes.remove(filme)
+            try:
+                clienteApi.excluir_filme(filme.id)
+            except clienteApi.ErroApi as erro:
+                QMessageBox.warning(self, "Aviso", str(erro))
+                return
             self.filmeAtual = None
-            self.avaliacoes = [a for a in self.avaliacoes if a.filme_id != filme.id]
-            self.salvar_avaliacoes_em_segundo_plano()
-            self.salvar_em_segundo_plano() 
-            self.atualizar_lista()
+            self.recarregar()
 
     def abrir_alugar(self):
         filme = self.filme_selecionado()
@@ -333,7 +405,7 @@ class Janela(QMainWindow):
             return
 
         if not filme.disponivel:
-            QMessageBox.warning(self, "Indisponível", f"'{filme.titulo}' já está alugado.")
+            QMessageBox.warning(self, "Indisponível", f"'{filme.titulo}' não tem cópias disponíveis.")
             return
 
         dialog = JanelaAlugar(filme.titulo, filme.genero)
@@ -342,9 +414,9 @@ class Janela(QMainWindow):
                 clienteApi.alugar(self.login, filme.id)
             except clienteApi.ErroApi as erro:
                 QMessageBox.warning(self, "Aviso", str(erro))
+                self.recarregar()
                 return
-            self.filmes = self.carregar_filmes_da_api()
-            self.atualizar_lista()
+            self.recarregar()
             QMessageBox.information(self, "Sucesso", f"'{filme.titulo}' alugado com sucesso!")
 
     def devolver_filme(self):
@@ -352,23 +424,19 @@ class Janela(QMainWindow):
         if filme is None:
             QMessageBox.warning(self, "Aviso", "Selecione um filme para devolver.")
             return
-
-        if filme.disponivel:
-            QMessageBox.warning(self, "Aviso", f"'{filme.titulo}' não está alugado.")
-            return
-
-        if filme.alugado_por and filme.alugado_por != self.login:
-            QMessageBox.warning(self, "Não permitido",
-                                f"'{filme.titulo}' foi alugado por outro usuário.")
+        if filme.alugado_por != self.login:
+            QMessageBox.warning(self, "Aviso", f"Você não alugou '{filme.titulo}'.")
             return
 
         resposta = QMessageBox.question(self, "Confirmar devolução", f"Devolver '{filme.titulo}'?")
         if resposta == QMessageBox.Yes:
-            filme.status = DISPONIVEL
-            filme.alugado_por = ""
-            filme.data_aluguel = ""
-            self.salvar_em_segundo_plano((self.login, filme.titulo, "Devolução"))
-            self.atualizar_lista()
+            try:
+                clienteApi.devolver(self.login, filme.id)
+            except clienteApi.ErroApi as erro:
+                QMessageBox.warning(self, "Aviso", str(erro))
+                self.recarregar()
+                return
+            self.recarregar()
             QMessageBox.information(self, "Sucesso", f"'{filme.titulo}' devolvido com sucesso!")
 
     def avaliar_filme(self):
@@ -377,61 +445,35 @@ class Janela(QMainWindow):
             QMessageBox.warning(self, "Aviso", "Selecione um filme para avaliar.")
             return
 
-
         if not self.ja_alugou(filme):
             QMessageBox.warning(self, "Não permitido", "Você só pode avaliar filmes que já alugou.")
             return
 
-        existente = next((a for a in self.avaliacoes
-                          if a.filme_id == filme.id and a.usuario == self.login), None)
+        try:
+            avaliacoes = clienteApi.listar_avaliacoes(filme.id)
+        except clienteApi.ErroApi as erro:
+            QMessageBox.critical(self, "Erro", str(erro))
+            return
+        existente = next((a for a in avaliacoes if a["usuario"] == self.login), None)
 
         dialog = JanelaAvaliar(filme.titulo,
-                               existente.nota if existente else 5,
-                               existente.comentario if existente else "")
+                               existente["nota"] if existente else 5,
+                               existente["comentario"] if existente else "")
         if dialog.exec() != QDialog.Accepted:
             return
 
         nota = dialog.campoNota.value()
         comentario = dialog.campoComentario.toPlainText().strip()
-        agora = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        try:
+            clienteApi.avaliar(self.login, filme.id, nota, comentario)
+        except clienteApi.ErroApi as erro:
+            QMessageBox.warning(self, "Aviso", str(erro))
+            return
+        self.recarregar()
 
-        if existente: 
-            existente.nota = nota
-            existente.comentario = comentario
-            existente.data_hora = agora
-        else:
-            self.avaliacoes.append(Avaliacao(filme.id, self.login, nota, comentario, agora))
-
-        self.salvar_avaliacoes_em_segundo_plano()
-        self.atualizar_lista()
-
-    def salvar_avaliacoes_em_segundo_plano(self):
-        tarefa = GravarAvaliacoes(self.repoAvaliacoes, self.avaliacoes)
-        tarefa.erro.connect(lambda msg: QMessageBox.critical(self, "Erro ao salvar", msg))
-        tarefa.finished.connect(lambda t=tarefa: self.tarefas.remove(t) if t in self.tarefas else None)
-        self.tarefas.append(tarefa)
-        tarefa.start()
-
-    def closeEvent(self, event):
-        resposta = QMessageBox.question(self, "Sair", "Deseja realmente sair da locadora?")
-        if resposta == QMessageBox.Yes:
-            for t in list(self.tarefas):
-                t.wait()
-            event.accept()
-        else:
-            event.ignore()
-
-    def keyPressEvent(self, event):
-        if event.key() == Qt.Key_Delete and self.tipo_usuario == "Admin":
-            self.excluir_filme()
-
-    def salvar_em_segundo_plano(self, registro=None):
-        tarefa = GravarDados(self.repositorio, self.filmes, self.historico, registro)
-        tarefa.erro.connect(lambda msg: QMessageBox.critical(self, "Erro ao salvar", msg))
-        tarefa.finished.connect(lambda t=tarefa: self.tarefas.remove(t) if t in self.tarefas else None)
-        self.tarefas.append(tarefa)
-        tarefa.start()
-
+    # ------------------------------------------------------------------
+    # Histórico
+    # ------------------------------------------------------------------
     def abrir_historico(self):
         usuario = None if self.tipo_usuario == "Admin" else self.login
         try:
@@ -443,18 +485,18 @@ class Janela(QMainWindow):
         self.dialogHistorico.preencher(registros)
         self.dialogHistorico.exec()
 
-    def mostrar_historico(self, registros):
-        if self.tipo_usuario != "Admin":
-            registros = [r for r in registros if r["usuario"] == self.login]
-        self.dialogHistorico.preencher(registros)
-
     def exportar_historico(self):
         caminho, _ = QFileDialog.getSaveFileName(
             self, "Exportar histórico", "historico.txt", "Arquivos de texto (*.txt)"
         )
         if not caminho:
             return
-        tarefa = ExportarHistorico(self.historico.carregar(), caminho)
+        try:
+            registros = clienteApi.historico()
+        except clienteApi.ErroApi as erro:
+            QMessageBox.critical(self, "Erro", str(erro))
+            return
+        tarefa = ExportarHistorico(registros, caminho)
         tarefa.exportado.connect(self.exportacao_concluida)
         tarefa.erro.connect(self.exportacao_erro)
         tarefa.finished.connect(self.exportacao_finalizada)
@@ -471,6 +513,23 @@ class Janela(QMainWindow):
         tarefa = self.sender()
         if tarefa in self.tarefas:
             self.tarefas.remove(tarefa)
+
+    # ------------------------------------------------------------------
+    # Janela
+    # ------------------------------------------------------------------
+    def closeEvent(self, event):
+        resposta = QMessageBox.question(self, "Sair", "Deseja realmente sair da locadora?")
+        if resposta == QMessageBox.Yes:
+            self.timer.stop()
+            for t in list(self.tarefas):
+                t.wait()
+            event.accept()
+        else:
+            event.ignore()
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Delete and self.tipo_usuario == "Admin":
+            self.excluir_filme()
 
     def sair_da_conta(self):
         from janelaLogin import JanelaLogin
@@ -500,11 +559,3 @@ class Janela(QMainWindow):
             "F1  -  Mostrar esta lista"
         )
         QMessageBox.information(self, "Atalhos de teclado", texto)
-
-    def carregar_filmes_da_api(self):
-        try:
-            dados = clienteApi.listar_filmes()
-        except clienteApi.ErroApi as erro:
-            QMessageBox.critical(self, "Erro", str(erro))
-            return []
-        return [Filme.from_dict(d) for d in dados]

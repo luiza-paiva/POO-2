@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 import requests
 
 URL_BASE = "http://localhost:8000"
@@ -50,9 +52,23 @@ def cadastrar(login, senha):
         return False
     raise ErroApi(_detalhe(resposta))
 
-def listar_filmes():
+def listar_filmes(login=None):
+    params = {"login": login} if login else None
     try:
-        resposta = requests.get(f"{URL_BASE}/filmes", timeout=TEMPO_LIMITE)
+        resposta = requests.get(f"{URL_BASE}/filmes", params=params, timeout=TEMPO_LIMITE)
+    except requests.exceptions.RequestException:
+        raise ErroApi("API fora do ar")
+
+    if resposta.status_code == 200:
+        return resposta.json()
+    raise ErroApi(_detalhe(resposta))
+
+def listar_recomendados(login):
+    try:
+        resposta = requests.get(
+            f"{URL_BASE}/filmes/recomendados/{quote(login, safe='')}",
+            timeout=TEMPO_LIMITE,
+        )
     except requests.exceptions.RequestException:
         raise ErroApi("API fora do ar")
 
@@ -102,11 +118,11 @@ def _requisitar(metodo, caminho, corpo=None):
     if resposta.status_code not in (200, 201, 204):
         raise ErroApi(_detalhe(resposta))
 
-def cadastrar_filme(titulo, genero, sinopse=""):
-    _requisitar("POST", "/filmes", {"titulo": titulo, "genero": genero, "sinopse": sinopse})
+def cadastrar_filme(titulo, genero, sinopse="", copias=1):
+    _requisitar("POST", "/filmes", {"titulo": titulo, "genero": genero, "sinopse": sinopse, "copias": copias})
 
-def editar_filme(filme_id, titulo, genero, sinopse=""):
-    _requisitar("PUT", f"/filmes/{filme_id}", {"titulo": titulo, "genero": genero, "sinopse": sinopse})
+def editar_filme(filme_id, titulo, genero, sinopse="", copias=1):
+    _requisitar("PUT", f"/filmes/{filme_id}", {"titulo": titulo, "genero": genero, "sinopse": sinopse, "copias": copias})
 
 def excluir_filme(filme_id):
     _requisitar("DELETE", f"/filmes/{filme_id}")
