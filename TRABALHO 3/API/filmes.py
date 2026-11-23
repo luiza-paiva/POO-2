@@ -1,7 +1,7 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from db import driver, pg
@@ -30,10 +30,31 @@ FILMES_INICIAIS = [
     ("Um Sonho de Liberdade", "drama", "Condenado injustamente por duplo homicídio, um banqueiro faz amizade na prisão e nunca abandona a esperança de ser livre."),
 ]
 
+CYPHER_COLABORATIVO = """
+MATCH (eu:Usuario {login: $login})-[:ALUGOU]->(:Filme)<-[:ALUGOU]-(outro:Usuario)
+WHERE outro <> eu
+MATCH (outro)-[:ALUGOU]->(rec:Filme)
+WHERE NOT (eu)-[:ALUGOU]->(rec)
+RETURN rec.id AS id, count(DISTINCT outro) AS score
+ORDER BY score DESC, rec.titulo
+LIMIT $limite
+"""
+
+CYPHER_GENERO = """
+MATCH (eu:Usuario {login: $login})-[:ALUGOU]->(:Filme)
+      -[:DO_GENERO]->(g:Genero)<-[:DO_GENERO]-(rec:Filme)
+WHERE NOT (eu)-[:ALUGOU]->(rec)
+RETURN rec.id AS id, count(*) AS score
+ORDER BY score DESC, rec.titulo
+LIMIT $limite
+"""
+
+
 class FilmeEntrada(BaseModel):
     titulo: str = Field(min_length=1, max_length=200)
     genero: str
     sinopse: str = ""
+    copias: int = Field(default=1, ge=1, le=99)
 
 
 def _replicar_filme(filme_id: str, titulo: str, genero: str) -> None:
@@ -69,13 +90,57 @@ def _filme_dict(l) -> dict:
         "id": l[0],
         "titulo": l[1],
         "genero": l[2],
-        "status": "Alugado" if l[3] else "Disponível",
-        "alugado_por": l[3] or "",
-        "data_aluguel": l[4].strftime("%d/%m/%Y %H:%M:%S") if l[4] else "",
-        "media": round(float(l[5]), 1),
-        "qtd_avaliacoes": int(l[6]),
-        "sinopse": l[7],
+        "copias": l[3],
+        "copias_disponiveis": l[4],
+        "status": "Disponível" if l[4] > 0 else "Alugado",
+        "alugado_por": l[5] or "",
+        "data_aluguel": l[6].strftime("%d/%m/%Y %H:%M:%S") if l[6] else "",
+        "media": round(float(l[7]), 1),
+        "qtd_avaliacoes": int(l[8]),
+        "sinopse": l[9],
     }
+
+
+def _consultar_filmes(conn, ids: list[str] | None = None, login: str | None = None) -> list[dict]:
+    filtro = "WHERE f.id = ANY(%(ids)s::varchar[])" if ids is not None else ""
+    linhas = conn.execute(
+        f"""
+        SELECT f.id, f.titulo, g.nome, f.copias,
+            f.copias - COALESCE(ativos.qtd, 0),
+            meu.usuario, meu.data_aluguel,
+            COALESCE(av.media, 0), COALESCE(av.qtd, 0), f.sinopse
+        FROM filmes f
+        JOIN generos g ON g.id = f.genero_id
+        LEFT JOIN (
+            SELECT filme_id, COUNT(*) AS qtd
+            FROM alugueis WHERE data_devolucao IS NULL GROUP BY filme_id
+        ) ativos ON ativos.filme_id = f.id
+        LEFT JOIN alugueis meu ON meu.filme_id = f.id
+            AND meu.data_devolucao IS NULL AND meu.usuario = %(login)s
+        LEFT JOIN (
+            SELECT filme_id, AVG(nota) AS media, COUNT(*) AS qtd
+            FROM avaliacoes GROUP BY filme_id
+        ) av ON av.filme_id = f.id
+        {filtro}
+        ORDER BY g.nome, f.titulo
+        """,
+        {"ids": ids, "login": login},
+    ).fetchall()
+    return [_filme_dict(l) for l in linhas]
+
+
+def _ids_recomendados(login: str, limite: int) -> list[str]:
+    ids: list[str] = []
+    try:
+        with driver.session() as sessao:
+            for consulta in (CYPHER_COLABORATIVO, CYPHER_GENERO):
+                for r in sessao.run(consulta, login=login, limite=limite):
+                    if r["id"] not in ids:
+                        ids.append(r["id"])
+    except Exception:
+        log.warning("Neo4j indisponível ao recomendar filmes para %s", login)
+        return []
+    return ids[:limite]
 
 
 def semear() -> None:
@@ -113,23 +178,21 @@ def listar_generos():
 
 
 @router.get("")
-def listar():
+def listar(login: str | None = None):
     with pg() as conn:
-        linhas = conn.execute(
-            """
-            SELECT f.id, f.titulo, g.nome, a.usuario, a.data_aluguel,
-                COALESCE(av.media, 0), COALESCE(av.qtd, 0), f.sinopse
-            FROM filmes f
-            JOIN generos g ON g.id = f.genero_id
-            LEFT JOIN alugueis a ON a.filme_id = f.id AND a.data_devolucao IS NULL
-            LEFT JOIN (
-                SELECT filme_id, AVG(nota) AS media, COUNT(*) AS qtd
-                FROM avaliacoes GROUP BY filme_id
-            ) av ON av.filme_id = f.id
-            ORDER BY g.nome, f.titulo
-            """
-        ).fetchall()
-    return [_filme_dict(l) for l in linhas]
+        return _consultar_filmes(conn, login=login)
+
+
+@router.get("/recomendados/{login}")
+def recomendados(login: str, limite: int = Query(default=10, ge=1, le=50)):
+    ids = _ids_recomendados(login, limite)
+    if not ids:
+        return []
+    with pg() as conn:
+        filmes = _consultar_filmes(conn, ids, login)
+    ordem = {fid: n for n, fid in enumerate(ids)}
+    filmes.sort(key=lambda f: ordem[f["id"]])
+    return filmes
 
 
 @router.post("", status_code=201)
@@ -139,8 +202,8 @@ def cadastrar(f: FilmeEntrada):
     with pg() as conn:
         genero_id = _id_genero(conn, f.genero)
         conn.execute(
-            "INSERT INTO filmes (id, titulo, genero_id, sinopse) VALUES (%s, %s, %s, %s)",
-            (novo_id, titulo, genero_id, f.sinopse.strip()),
+            "INSERT INTO filmes (id, titulo, genero_id, sinopse, copias) VALUES (%s, %s, %s, %s, %s)",
+            (novo_id, titulo, genero_id, f.sinopse.strip(), f.copias),
         )
     _replicar_filme(novo_id, titulo, f.genero)
     return {"id": novo_id, "titulo": titulo, "genero": f.genero}
@@ -151,9 +214,17 @@ def editar(filme_id: str, f: FilmeEntrada):
     titulo = f.titulo.strip()
     with pg() as conn:
         genero_id = _id_genero(conn, f.genero)
+        ativos = conn.execute(
+            "SELECT COUNT(*) FROM alugueis WHERE filme_id = %s AND data_devolucao IS NULL",
+            (filme_id,),
+        ).fetchone()[0]
+        if f.copias < ativos:
+            raise HTTPException(
+                status_code=409, detail=f"Há {ativos} cópia(s) alugada(s) no momento"
+            )
         cur = conn.execute(
-            "UPDATE filmes SET titulo = %s, genero_id = %s, sinopse = %s WHERE id = %s",
-            (titulo, genero_id, f.sinopse.strip(), filme_id),
+            "UPDATE filmes SET titulo = %s, genero_id = %s, sinopse = %s, copias = %s WHERE id = %s",
+            (titulo, genero_id, f.sinopse.strip(), f.copias, filme_id),
         )
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Filme não encontrado")

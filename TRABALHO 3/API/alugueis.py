@@ -31,12 +31,12 @@ def _replicar_aluguel(login: str, filme_id: str, titulo: str) -> None:
     except Exception:
         log.warning("Neo4j indisponível ao replicar aluguel de %s", login)
 
-
 @router.post("", status_code=201)
 def alugar(a: AluguelEntrada):
     with pg() as conn:
         filme = conn.execute(
-            "SELECT titulo FROM filmes WHERE id = %s", (a.filme_id,)
+            "SELECT titulo, copias FROM filmes WHERE id = %s FOR UPDATE",
+            (a.filme_id,),
         ).fetchone()
         if not filme:
             raise HTTPException(status_code=404, detail="Filme não encontrado")
@@ -45,6 +45,20 @@ def alugar(a: AluguelEntrada):
         ).fetchone()
         if not usuario:
             raise HTTPException(status_code=404, detail="Usuário não encontrado")
+        ja_tem = conn.execute(
+            "SELECT 1 FROM alugueis "
+            "WHERE usuario = %s AND filme_id = %s AND data_devolucao IS NULL",
+            (a.login, a.filme_id),
+        ).fetchone()
+        if ja_tem:
+            raise HTTPException(status_code=409, detail="Você já alugou este filme")
+        ativos = conn.execute(
+            "SELECT COUNT(*) FROM alugueis "
+            "WHERE filme_id = %s AND data_devolucao IS NULL",
+            (a.filme_id,),
+        ).fetchone()[0]
+        if ativos >= filme[1]:
+            raise HTTPException(status_code=409, detail="Não há cópias disponíveis")
         try:
             conn.execute(
                 "INSERT INTO alugueis (usuario, filme_id, filme_titulo) "
@@ -52,7 +66,7 @@ def alugar(a: AluguelEntrada):
                 (a.login, a.filme_id, filme[0]),
             )
         except UniqueViolation:
-            raise HTTPException(status_code=409, detail="Filme já está alugado")
+            raise HTTPException(status_code=409, detail="Você já alugou este filme")
     _replicar_aluguel(a.login, a.filme_id, filme[0])
     return {"filme": filme[0], "usuario": a.login}
 
@@ -61,20 +75,17 @@ def alugar(a: AluguelEntrada):
 def devolver(a: AluguelEntrada):
     with pg() as conn:
         ativo = conn.execute(
-            "SELECT id, usuario, filme_titulo FROM alugueis "
-            "WHERE filme_id = %s AND data_devolucao IS NULL FOR UPDATE",
-            (a.filme_id,),
+            "SELECT id, filme_titulo FROM alugueis "
+            "WHERE filme_id = %s AND usuario = %s AND data_devolucao IS NULL "
+            "FOR UPDATE",
+            (a.filme_id, a.login),
         ).fetchone()
         if not ativo:
-            raise HTTPException(status_code=409, detail="Filme não está alugado")
-        if ativo[1] != a.login:
-            raise HTTPException(
-                status_code=403, detail="Filme foi alugado por outro usuário"
-            )
+            raise HTTPException(status_code=409, detail="Você não alugou este filme")
         conn.execute(
             "UPDATE alugueis SET data_devolucao = NOW() WHERE id = %s", (ativo[0],)
         )
-    return {"filme": ativo[2], "usuario": a.login}
+    return {"filme": ativo[1], "usuario": a.login}
 
 
 @router.get("/historico")
