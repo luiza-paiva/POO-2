@@ -35,8 +35,8 @@ MATCH (eu:Usuario {login: $login})-[:ALUGOU]->(:Filme)<-[:ALUGOU]-(outro:Usuario
 WHERE outro <> eu
 MATCH (outro)-[:ALUGOU]->(rec:Filme)
 WHERE NOT (eu)-[:ALUGOU]->(rec)
-RETURN rec.id AS id, count(DISTINCT outro) AS score
-ORDER BY score DESC, rec.titulo
+RETURN rec.id AS id, rec.titulo AS titulo, count(DISTINCT outro) AS score
+ORDER BY score DESC, titulo
 LIMIT $limite
 """
 
@@ -44,8 +44,8 @@ CYPHER_GENERO = """
 MATCH (eu:Usuario {login: $login})-[:ALUGOU]->(:Filme)
       -[:DO_GENERO]->(g:Genero)<-[:DO_GENERO]-(rec:Filme)
 WHERE NOT (eu)-[:ALUGOU]->(rec)
-RETURN rec.id AS id, count(*) AS score
-ORDER BY score DESC, rec.titulo
+RETURN rec.id AS id, rec.titulo AS titulo, count(*) AS score
+ORDER BY score DESC, titulo
 LIMIT $limite
 """
 
@@ -138,7 +138,7 @@ def _ids_recomendados(login: str, limite: int) -> list[str]:
                     if r["id"] not in ids:
                         ids.append(r["id"])
     except Exception:
-        log.warning("Neo4j indisponível ao recomendar filmes para %s", login)
+        log.exception("Neo4j indisponível ao recomendar filmes para %s", login)
         return []
     return ids[:limite]
 
@@ -185,15 +185,24 @@ def listar(login: str | None = None):
 
 @router.get("/recomendados/{login}")
 def recomendados(login: str, limite: int = Query(default=10, ge=1, le=50)):
-    ids = _ids_recomendados(login, limite)
+    ids = _ids_recomendados(login, 50)
     if not ids:
         return []
     with pg() as conn:
+        alugados = {
+            l[0] for l in conn.execute(
+                "SELECT DISTINCT filme_id FROM alugueis "
+                "WHERE usuario = %s AND filme_id IS NOT NULL",
+                (login,),
+            ).fetchall()
+        }
+        ids = [i for i in ids if i not in alugados][:limite]
+        if not ids:
+            return []
         filmes = _consultar_filmes(conn, ids, login)
     ordem = {fid: n for n, fid in enumerate(ids)}
     filmes.sort(key=lambda f: ordem[f["id"]])
     return filmes
-
 
 @router.post("", status_code=201)
 def cadastrar(f: FilmeEntrada):

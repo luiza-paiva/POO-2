@@ -6,7 +6,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import (
     QPixmap, QPainter, QColor, QLinearGradient, QFont, QPainterPath, QTextOption
 )
-from PySide6.QtCore import Qt, Signal, QRectF, QPropertyAnimation, QEasingCurve
+from PySide6.QtCore import Qt, Signal, QRectF, QPropertyAnimation, QEasingCurve, QTimer
+
 
 LARGURA = 196
 LARGURA_POSTER = 170
@@ -144,7 +145,7 @@ class CartaoFilme(QFrame):
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and self.rect().contains(event.position().toPoint()):
-            self.clicado.emit(self.filme_id)
+            QTimer.singleShot(0, lambda fid=self.filme_id: self.clicado.emit(fid))
         super().mouseReleaseEvent(event)
 
 

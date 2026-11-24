@@ -193,10 +193,11 @@ class TelaFilme(QDialog):
     def _preencher_avaliacoes(self, avaliacoes):
         while self.listaAvaliacoes.count():
             item = self.listaAvaliacoes.takeAt(0)
-            if item.widget():
-                item.widget().hide()
-                item.widget().setParent(None)
-                item.widget().deleteLater()
+            w = item.widget()
+            if w is not None:
+                w.hide()
+                w.setParent(None)
+                w.deleteLater()
 
         self.secaoAvaliacoes.setVisible(bool(avaliacoes))
         # A API já devolve da avaliação mais recente para a mais antiga.

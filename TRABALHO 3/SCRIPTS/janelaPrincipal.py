@@ -192,6 +192,7 @@ class Janela(QMainWindow):
         self.setCentralWidget(container)
 
         self.atualizar_lista()
+        self.baixar_posters()
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.sincronizar)
@@ -217,15 +218,6 @@ class Janela(QMainWindow):
 
         resumo = {f.id: (f.media, f.qtd_avaliacoes) for f in self.filmes if f.qtd_avaliacoes}
 
-        if self.generoAtivo is None and not texto:
-            porId = {f.id: f for f in self.filmes}
-            recomendados = [porId[i] for i in self.idsRecomendados if i in porId]
-            if recomendados:
-                fileira = FileiraGenero("Recomendados para você", recomendados, resumo)
-                fileira.clicado.connect(self.selecionar_filme)
-                self.layoutFileiras.addWidget(fileira)
-                self.fileiras.append(fileira)
-
         grupos = {}
         for f in filmes:
             grupos.setdefault(f.genero, []).append(f)
@@ -236,6 +228,15 @@ class Janela(QMainWindow):
             fileira.clicado.connect(self.selecionar_filme)
             self.layoutFileiras.addWidget(fileira)
             self.fileiras.append(fileira)
+
+        if self.generoAtivo is None and not texto:
+            porId = {f.id: f for f in self.filmes}
+            recomendados = [porId[i] for i in self.idsRecomendados if i in porId]
+            if recomendados:
+                fileira = FileiraGenero("Recomendados para você", recomendados, resumo)
+                fileira.clicado.connect(self.selecionar_filme)
+                self.layoutFileiras.addWidget(fileira)
+                self.fileiras.append(fileira)
 
         if not filmes:
             vazio = QLabel("Nenhum filme encontrado.\nTente outro nome ou escolha “Todos” nos gêneros.")
@@ -252,6 +253,8 @@ class Janela(QMainWindow):
                     c.set_selecionado(c.filme_id == self.filmeAtual.id)
 
     def baixar_posters(self):
+        if any(isinstance(t, BaixarPosters) for t in self.tarefas):
+            return
         pendentes = [f for f in self.filmes if not caminho_poster(f)]
         if not pendentes:
             return
@@ -315,9 +318,9 @@ class Janela(QMainWindow):
         if self.filmeAtual is not None:
             self.filmeAtual = next((f for f in self.filmes if f.id == self.filmeAtual.id), None)
         self.atualizar_lista()
+        self.baixar_posters()
 
     def sincronizar(self):
-        """Chamado pelo timer: busca o catálogo e só redesenha se algo mudou."""
         if self._sincronizando:
             return
         self._sincronizando = True
@@ -327,12 +330,19 @@ class Janela(QMainWindow):
             except clienteApi.ErroApi:
                 return  # silencioso: sem caixa de erro a cada ciclo
             novos = [Filme.from_dict(d) for d in dados]
-            if [f.to_dict() for f in novos] == [f.to_dict() for f in self.filmes]:
+
+            antigos_ids = list(self.idsRecomendados)
+            self.carregar_recomendados()
+            mudou_recomendados = antigos_ids != self.idsRecomendados
+
+            if ([f.to_dict() for f in novos] == [f.to_dict() for f in self.filmes]
+                    and not mudou_recomendados):
                 return
             self.filmes = novos
             if self.filmeAtual is not None:
                 self.filmeAtual = next((f for f in novos if f.id == self.filmeAtual.id), None)
             self.atualizar_lista()
+            self.baixar_posters()
             if self.telaFilme is not None:
                 if self.filmeAtual is None:
                     self.telaFilme.accept()  # filme excluído por outro usuário
