@@ -1,0 +1,430 @@
+Changelog - Locadora de Filmes 
+Integrantes: Victor Hugo da Silva Ferreira, Luiza Oliveira Paiva e Samuel de Carvalho Rodrigues
+-----------------------------------------------------------------------------------------------
+ENTREGA PARCIAL 01
+
+Adicionado - Arquivos
+- Persistência do catálogo de filmes em dados/filmes.json
+  (repositorio.py), com carregamento na abertura do programa.
+- Histórico de aluguéis e devoluções em dados/alugueis.csv
+  (historicoAlgueis.py), com registro de data/hora, usuário, filme e ação.
+
+Adicionado - Threads
+- Classe GravarDados (tarefas_arquivo.py), uma QThread que grava o
+  catálogo em segundo plano, sem travar a interface.
+- Método salvar_em_segundo_plano na janela principal, usado ao
+  cadastrar, editar e excluir filmes.
+- threading.Lock no histórico para evitar escrita simultânea no CSV.
+
+Adicionado - Interface
+- A janela principal passa a receber o login do usuário, usado no
+  registro do histórico.
+
+------------------------------------------------------------------------------------------------
+ENTREGA PARCIAL 02
+
+Adicionado - Arquivos
+- Classe CarregarHistorico (tarefas_arquivo.py): thread que lê o
+  histórico CSV sem travar a interface.
+- Classe JanelaHistorico (dialogos.py): lista com o histórico de
+  aluguéis e devoluções. Admin vê todos; Usuário vê só os seus.
+- Ação "Ver Histórico" na janela principal.
+- Classe registroUsuarios (registroUsuarios.py): guarda os
+  usuários em dados/usuarios.json (login, senha e tipo), com
+  cadastro e validação de login. Se o arquivo não existe, é criado
+  com um administrador padrão.
+- threading.RLock no registroUsuarios para evitar escrita
+  simultânea no arquivo.
+
+Adicionado - Interface
+- Classe JanelaCadastroUsuario (dialogos.py): tela de criação de
+  conta, com login, senha e confirmação de senha.
+- Botão "Criar conta" na tela de login.
+
+Adicionado - Threads
+- Classe ExportarHistorico (tarefas_arquivo.py): thread que grava o
+  histórico em um arquivo .txt sem travar a interface.
+
+Alterado
+- Aluguel e devolução passam a gravar o catálogo e o histórico em
+  thread (salvar_em_segundo_plano).
+- closeEvent aguarda as threads terminarem antes de fechar.
+- RepositorioFilmes.salvar protegido por threading.Lock.
+- JanelaLogin: o login agora é validado em usuarios.json. Antes,
+  qualquer login e senha eram aceitos.
+- O tipo da conta (Admin ou Usuário) passa a vir do cadastro. O
+  seletor de tipo foi removido da tela de login.
+- A tela de cadastro cria apenas contas do tipo Usuário.
+
+------------------------------------------------------------------------------------------------
+ENTREGA FINAL - TRABALHO 2
+
+Alterado
+- JanelaCadastroUsuario: corrigido o nome do campo confirmarSenha.
+- JanelaLogin: criação do registroUsuarios e leitura dos campos do
+  diálogo de cadastro de conta.
+- registroUsuarios: o administrador padrão agora é salvo e retornado
+  quando o arquivo de usuários não existe; tipo padronizado como "Admin".
+- ExportarHistorico: corrigida a indentação (a classe estava dentro de
+  CarregarHistorico).
+
+
+
+Adicionado - Interface
+- Ação "Exportar Histórico" para o Admin, com escolha do arquivo .txt.
+- Ação "Sair da conta", que volta à tela de login/cadastro.
+- Ícones e nomes nas ações da barra de ferramentas.
+- Atalhos de teclado para as ações (Ctrl+N, Ctrl+E, Ctrl+R, Ctrl+D,
+  Ctrl+H, Ctrl+S, Ctrl+L,Ctrl+T).
+- Ação "Atalhos" (F1), que lista os atalhos disponíveis.
+-Tema (Escuro/Claro) para preferencia do usuário.
+
+
+------------------------------------------------------------------------------------------------
+
+TRABALHO 3
+
+ENTREGA PARCIAL 01
+------------------------------------------------------------
+Alterado
+- janelaLogin.py: nova tela de login, com bloco centralizado, icone,
+  titulo, campos arredondados e botoes estilizados.
+- janelaLogin.py: estilo proprio (QSS) com cores para o tema claro e
+  para o tema escuro, reaplicado ao alternar o tema.
+- tema.py: o tema claro passou a usar uma paleta propria
+  (_paleta_clara), sem depender do estilo padrao do sistema.
+- tema.py: o esquema de cor do Qt (claro/escuro) e informado ao
+  alternar o tema.
+  - Filme (models.py): novos campos alugado_por e data_aluguel. O from_dict
+  lê os campos com .get, então o filmes.json antigo continua carregando.
+- Janela.abrir_alugar: grava o login de quem alugou e a data/hora do
+  aluguel.
+- Janela.devolver_filme: só quem alugou o filme pode devolvê-lo; ao
+  devolver, os campos alugado_por e data_aluguel são limpos.
+- Janela.excluir_filme: ao excluir um filme, as avaliações dele também
+  são removidas.
+- Janela.atualizar_lista: exibe a média e a quantidade de avaliações de
+  cada filme e mantém o filme selecionado após alugar, devolver ou
+  recarregar a lista.
+- Janela.mostrar_atalhos: inclui o atalho Ctrl+B (Avaliar filme).
+- Janela.atualizar_lista: passa a recriar as fileiras de cards em vez
+  de preencher um QListWidget; mantém o filme selecionado após alugar,
+  devolver ou recarregar.
+- Janela.filme_selecionado: devolve o filme clicado (filmeAtual), então
+  alugar, devolver, avaliar, editar e excluir continuam funcionando.
+- tema.py: estilos dos cards (normal, hover e selecionado) e do título
+  da fileira para os temas claro e escuro, aplicados com setStyleSheet.
+- tema.py: o estilo da tela de login (ESTILO, CORES_CLARO,
+  CORES_ESCURO) foi movido para cá, com a função estilo_login(), para
+  ser compartilhado com a tela de criar conta sem import circular.
+- janelaLogin.py: passou a usar tema.estilo_login().
+
+Adicionado - Regras de negócio
+- Controle de quem alugou cada filme (validação na devolução).
+- Sistema de avaliações: nota de 1 a 5 e comentário opcional, apenas
+  para filmes que o usuário já alugou, com uma avaliação por usuário e
+  filme (avaliar de novo atualiza a anterior).
+
+Adicionado - Código
+- Avaliacao (models.py): modelo de dados da avaliação.
+- RepositorioAvaliacoes (repositorio.py): leitura e gravação das
+  avaliações em dados/avaliacoes.json.
+- GravarAvaliacoes (tarefas_arquivo.py): QThread que grava as avaliações
+  em segundo plano.
+- JanelaAvaliar (dialogos.py): diálogo para escolher nota e comentário.
+
+Adicionado
+- janelaLogin.py: opcao "Mostrar senha".
+- janelaLogin.py: Enter no campo de login passa o foco para a senha.
+- janelaLogin.py: metodos aplicar_estilo, alternar_tema e alternar_senha.
+- Ação "Avaliar Filme" para usuários comuns (menu, barra de ferramentas
+  e atalho Ctrl+B).
+- Média de avaliações exibida na lista de filmes.
+
+Adicionado - Interface
+- cartaoFilme.py: classe CartaoFilme, card de cada filme com pôster
+  (posters/<id>.jpg), título, status Disponível/Alugado e sinal de
+  clique. Sem pôster, mostra um fundo colorido por gênero.
+- cartaoFilme.py: classe FileiraGenero, fileira com título do gênero e
+  rolagem horizontal, com altura ajustada ao tamanho do card.
+- Janela principal: a lista de filmes foi trocada por fileiras de
+  cards agrupadas por gênero, dentro de uma área de rolagem vertical.
+- Janela.selecionar_filme: guarda o filme clicado (filmeAtual) e marca
+  o card selecionado com borda de destaque.
+- JanelaCadastroUsuario: tela de criar conta com o mesmo design da
+  tela de login (ícone, título, campos com placeholder, mostrar senha
+  e botão Cancelar).
+
+------------------------------------------------------------------------------------------------
+ENTREGA PARCIAL 02
+------------------------------------------------------------
+Adicionado - Infraestrutura (Docker)
+- docker-compose.yml: sobe três serviços em contêineres: postgres
+  (PostgreSQL 16), neo4j (Neo4j 5) e api (FastAPI). Os bancos só são
+  acessados pela API, dentro da rede do Docker.
+- Dockerfile (API/): imagem da API em Python 3.12.
+- Volumes pg_data e neo4j_data, para os dados não se perderem ao
+  recriar os contêineres.
+- Verificação de saúde (healthcheck) nos dois bancos; a API só inicia
+  depois que ambos estão prontos.
+- .env: senhas dos bancos fora do código (não versionado).
+- MANUAL.md: manual de execução e comandos úteis.
+
+Adicionado - Bancos de dados
+- PostgreSQL (fonte da verdade): tabelas usuarios, generos, filmes,
+  alugueis e avaliacoes (DADOS/esquema.sql), com chaves estrangeiras,
+  CHECK (tipo da conta e nota de 1 a 5), UNIQUE (uma avaliação por
+  usuário e filme) e ON DELETE CASCADE (excluir filme remove as
+  avaliações).
+- Aluguel ativo é o registro sem data_devolucao; um índice único
+  parcial impede dois aluguéis ativos do mesmo filme. A tabela
+  alugueis substitui o alugueis.csv como histórico.
+- Neo4j (grafo de recomendação): nós Usuario, Filme e Genero, relações
+  ALUGOU e DO_GENERO, com constraints de unicidade
+  (DADOS/esquema.cypher). Guarda só login, id, título e gênero; senha
+  e datas ficam apenas no PostgreSQL.
+- Justificativa do armazenamento: PostgreSQL para dados estruturados,
+  transações e integridade; Neo4j para as relações entre usuários e
+  filmes (recomendação); arquivos continuam para pôsteres, preferência
+  de tema e exportação do histórico em .txt.
+
+Adicionado - API (FastAPI, pasta API/)
+- main.py: aplicação, rota /saude e inicialização (constraints do
+  Neo4j, administrador padrão, gêneros e catálogo inicial de 15 filmes).
+- db.py: conexões com PostgreSQL e Neo4j, configuradas por variáveis
+  de ambiente.
+- usuarios.py: POST /usuarios/cadastro e POST /usuarios/login, com
+  senha guardada em hash (bcrypt).
+- filmes.py: GET e POST /filmes, PUT e DELETE /filmes/{id} e
+  GET /filmes/generos. A listagem traz status, quem alugou, média e
+  quantidade de avaliações.
+- alugueis.py: POST /alugueis, POST /alugueis/devolucao e
+  GET /alugueis/historico. Só quem alugou o filme pode devolvê-lo.
+- Gravação em duas etapas: primeiro no PostgreSQL, depois replicada no
+  Neo4j com MERGE. Se o Neo4j estiver fora do ar, o sistema continua
+  funcionando.
+
+Adicionado - Interface
+- telaFilme.py: classe TelaFilme, tela individual do filme, aberta ao
+  clicar no card. Mostra pôster grande, título, etiquetas de gênero e
+  status (Disponível ou Alugado por <usuário>), nota média, sinopse e
+  as avaliações dos usuários (estrelas e comentário).
+- TelaFilme: o usuário comum vê os botões Alugar/Devolver filme e
+  Avaliar filme; o Admin vê Editar filme e Excluir. Os botões chamam
+  os métodos da janela principal, então as regras continuam as mesmas,
+  e a tela se atualiza depois de cada ação.
+- TelaFilme: o botão fica "Indisponível" (desabilitado) quando outro
+  usuário alugou o filme. Avaliar filme fica desabilitado, com a dica
+  "Alugue este filme para poder avaliá-lo", se o usuário ainda não
+  alugou, e vira "Editar minha avaliação" se ele já avaliou.
+- Janela principal: cabeçalho com saudação ("Olá, <login>") e dica de
+  uso, de acordo com o tipo de conta.
+- Janela principal: a busca filtra enquanto o usuário digita (o botão
+  "Buscar" foi removido) e mostra uma mensagem quando nenhum filme é
+  encontrado.
+- Janela principal: botões de filtro por gênero (Todos, Romance, Ação,
+  Drama, Terror e Ficção científica), que funcionam junto com a busca.
+  O menu Gênero ganhou a opção "Todos os gêneros".
+- cartaoFilme.py: card redesenhado, menor, com selo Disponível/Alugado
+  sobre o pôster, título e nota média (ex.: ★ 4,5 (2)) ou "Sem
+  avaliações".
+- cartaoFilme.py: setas ‹ e › em cada fileira para rolar os filmes,
+  exibidas só quando há mais filmes do que cabem na tela. A roda do
+  mouse sobre a fileira rola a página.
+- EstrelasWidget (dialogos.py): nota de 1 a 5 em estrelas clicáveis,
+  usada na JanelaAvaliar no lugar do QSpinBox.
+- JanelaCadastro (dialogos.py): novo campo Sinopse, usado ao cadastrar
+  e ao editar um filme.
+- posters/: pôsteres dos 15 filmes do catálogo inicial.
+
+Adicionado - Código
+- Filme (models.py): novo campo sinopse. O from_dict lê o campo com
+  .get, então o filmes.json antigo continua carregando.
+- SINOPSES (repositorio.py): sinopse dos 15 filmes iniciais.
+  RepositorioFilmes.carregar preenche a sinopse dos filmes do catálogo
+  inicial que ainda não têm e grava o arquivo.
+- cartaoFilme.py: funções formatar_nota, nome_arquivo_poster,
+  caminho_poster e gerar_poster (pôster com cantos arredondados).
+- Janela.definir_genero: guarda o gênero escolhido e marca o botão de
+  filtro correspondente.
+- Janela.ja_alugou: verifica no histórico se o usuário já alugou o
+  filme.
+- tema.py: ESTILO_APP e função estilo_app(), com o estilo dos cards,
+  fileiras, filtros, busca e tela do filme nos temas claro e escuro.
+
+Alterado
+- cartaoFilme.py: o pôster agora é procurado em posters/<título>.jpg
+  (título em minúsculas, sem acento, com espaços e símbolos trocados
+  por _, ex.: o_poderoso_chefao.jpg). Também aceita .jpeg, .png e
+  .webp, e posters/<id>.jpg continua como alternativa. O id é gerado
+  de forma aleatória em cada máquina, então não servia para nomear os
+  arquivos. Sem pôster, o card mostra um degradê com a cor do gênero e
+  a inicial do título.
+- cartaoFilme.py: o sinal clicado passou a enviar o id como texto
+  (antes era int, mas os ids são uuid) e o card passou a expor
+  filme_id, nome que a janela principal já usava.
+- Janela.atualizar_lista: passa a aplicar a busca e o gênero
+  escolhidos, então o filtro se mantém depois de alugar ou devolver.
+  Também calcula a média e a quantidade de avaliações exibidas no card
+  e ordena as fileiras pela lista GENEROS.
+- Janela.selecionar_filme: além de marcar o card, abre a TelaFilme.
+- Janela.filtrar_por_genero: passa a chamar definir_genero.
+- Janela.buscar_filme: removido, pois a busca agora é feita em
+  atualizar_lista a cada letra digitada.
+- Janela.avaliar_filme: a verificação de aluguel passou para
+  ja_alugou.
+- Janela.excluir_filme: limpa o filme selecionado depois de excluir.
+- Janela.cadastrar_filme e Janela.editar_filme: passam a gravar a
+  sinopse.
+- JanelaAvaliar: a nota é escolhida em estrelas (EstrelasWidget).
+- tema.py: os estilos dos cards (_QSS_COMUM, _QSS_ESCURO e _QSS_CLARO)
+  foram substituídos por ESTILO_APP. O fundo do tema claro foi
+  clareado (de 220 para 240).
+
+
+------------------------------------------------------------------------------------------------
+ENTREGA FINAL - TRABALHO 3
+------------------------------------------------------------
+
+Adicionado - Infraestrutura
+- Tailscale: o servidor (Docker Compose) é acessado pelos aplicativos
+  por meio de uma rede privada Tailscale, sem expor a API na internet.
+
+Adicionado - API
+- avaliacoes.py: POST /avaliacoes e GET /avaliacoes/{filme_id}. Só
+  aceita avaliação (nota de 1 a 5 e comentário) de quem já alugou o
+  filme (senão responde 403). Avaliar de novo atualiza a anterior.
+- filmes.py: campo sinopse no cadastro, na edição e na listagem
+  (GET /filmes), junto com média e quantidade de avaliações.
+- filmes.py: sinopses dos 15 filmes iniciais; o semear preenche a
+  sinopse dos filmes que ainda estão sem.
+- esquema.sql: coluna sinopse na tabela filmes.
+- filmes.py: GET /filmes/recomendados/{login}, recomendação feita no
+  Neo4j: filmes alugados por quem alugou os mesmos filmes que o
+  usuário (relação ALUGOU), completados com filmes dos gêneros que ele
+  já alugou (relação DO_GENERO). Só sugere filmes que o usuário ainda
+  não alugou. Os dados completos vêm do PostgreSQL. Se o Neo4j estiver
+  fora do ar, devolve lista vazia.
+- filmes.py: funções _consultar_filmes (listagem com cópias, média e
+  avaliações, usada por GET /filmes e pelas recomendações) e
+  _ids_recomendados (consultas Cypher).
+- filmes.py: campo copias no cadastro, na edição e na listagem. A
+  listagem traz copias, copias_disponiveis e status (Disponível
+  enquanto houver cópia). A edição recusa (409) reduzir as cópias
+  abaixo do número de cópias alugadas no momento.
+- filmes.py: GET /filmes aceita o parâmetro login; alugado_por passa a
+  indicar se aquele usuário está com uma cópia do filme.
+- alugueis.py: alugar confere se há cópia disponível (409 sem cópias)
+  e impede o mesmo usuário de alugar duas cópias do mesmo filme. A
+  linha do filme é travada (FOR UPDATE) para que pedidos simultâneos
+  não aluguem além do número de cópias.
+- alugueis.py: devolver localiza o aluguel ativo do próprio usuário
+  (409 se ele não alugou o filme).
+- esquema.sql: coluna copias (padrão 1, mínimo 1) na tabela filmes. O
+  índice ux_aluguel_ativo passou a valer por usuário e filme, em vez
+  de só por filme.
+- posters.py: GET /posters/{filme_id}, que devolve o pôster do filme a
+  partir da pasta API/posters (404 se não houver).
+
+Adicionado - Cliente da API (clienteApi.py)
+- login, cadastrar, listar_filmes, alugar, devolver, historico,
+  cadastrar_filme, editar_filme, excluir_filme, avaliar,
+  listar_avaliacoes e listar_recomendados. Todas tratam API fora do ar
+  (ErroApi).
+- listar_filmes recebe o login do usuário; cadastrar_filme e
+  editar_filme enviam o número de cópias.
+- clienteApi.py: o endereço do servidor é lido da variável de ambiente
+  LOCADORA_API; sem ela, usa o endereço do servidor na rede Tailscale.
+- clienteApi.baixar_poster: baixa o pôster pela API.
+- BaixarPosters (tarefas_arquivo.py): QThread que baixa em segundo plano
+  os pôsteres que faltam e guarda em dados/cache_posters.
+- cartaoFilme.caminho_poster: passa a procurar também no cache.
+- Janela.baixar_posters: dispara o download ao abrir, recarregar e
+  sincronizar, sem iniciar um novo download enquanto outro está em
+  andamento.
+
+Adicionado - Interface
+- Janela.carregar_recomendados e fileira "Recomendados para você" no
+  final da tela principal (depois das fileiras por gênero), só para
+  usuário comum e quando não há busca nem filtro de gênero ativos.
+  Some se não houver sugestões. Filmes sem cópia disponível também
+  são sugeridos e aparecem com o selo "Indisponível".
+- Janela.sincronizar: um timer (INTERVALO_SINCRONIZACAO_MS, 5 s) busca
+  o catálogo e as recomendações na API e só redesenha se algo mudou.
+  Atualiza a TelaFilme aberta e a fecha se o filme foi excluído por
+  outro usuário.
+- JanelaCadastro (dialogos.py): campo Cópias (1 a 99), usado ao
+  cadastrar e ao editar um filme.
+- Filme (models.py): novos campos copias e copias_disponiveis.
+
+Alterado - Interface (o app passa a usar a API em vez de arquivos)
+- JanelaLogin: login e criação de conta pela API.
+- Janela: cadastrar, editar, excluir, alugar, devolver, avaliar e ver
+  histórico agora são feitos pela API.
+- Janela.carregar_filmes_da_api e Janela.recarregar: carregam o
+  catálogo da API e mantêm o filme selecionado.
+- Janela.atualizar_lista: média e quantidade de avaliações vêm da API;
+  a fileira "Recomendados para você" passou do topo para o final do
+  catálogo.
+- Janela.exportar_historico: exporta o histórico vindo da API.
+- TelaFilme: as avaliações vêm da API (listar_avaliacoes).
+- Filme (models.py): novos campos media e qtd_avaliacoes.
+- CartaoFilme.atualizar_status: recebe o filme e mostra "Disponível
+  X/Y" ou "Indisponível" no selo.
+- TelaFilme.atualizar: a etiqueta mostra "Disponível: X de Y" ou
+  "Indisponível" e deixa de mostrar quem alugou.
+- TelaFilme._atualizar_botoes_usuario e _alugar_ou_devolver: o botão
+  vira Devolver quando o próprio usuário está com uma cópia; senão é
+  Alugar, ou Indisponível (desabilitado) se não há cópias.
+- Janela.abrir_alugar e Janela.devolver_filme: mensagens e validações
+  ajustadas ao controle por cópias (devolver exige que o usuário
+  tenha alugado o filme).
+- Janela (barra de ferramentas): removidos os botões Alugar Filme,
+  Devolver Filme e Avaliar Filme (usuário) e Cadastrar Filme, Editar
+  Filme e Excluir Filme (Admin). As ações continuam no menu Filme,
+  com os mesmos atalhos (Ctrl+R, Ctrl+D, Ctrl+B, Ctrl+N, Ctrl+E e
+  Delete), e também na TelaFilme. A barra ficou com Ver Histórico,
+  Exportar Histórico (Admin), Alternar tema, Sair da conta e Atalhos.
+
+Removido
+- Uso local de filmes.json, alugueis.csv, avaliacoes.json e
+  usuarios.json. Continuam em arquivo apenas os pôsteres, a
+  preferência de tema (config.json) e a exportação do histórico em
+  .txt.
+- Arquivos do cliente que ficaram sem uso: registroUsuarios.py,
+  historicoAlgueis.py, repositorio.py (com RepositorioFilmes,
+  RepositorioAvaliacoes e as sinopses, que agora ficam na API),
+  conexaoBanco.py (acesso direto ao Neo4j, pois o cliente só fala com
+  a API) e teste.py.
+- tarefas_arquivo.py: classes GravarDados, CarregarHistorico e
+  GravarAvaliacoes. Ficou só ExportarHistorico (e BaixarPosters,
+  adicionada).
+- JanelaLogin: deixou de criar o registroUsuarios.
+- tema.py: passou a definir o próprio PASTA_DADOS em vez de importar
+  do repositorio.py.
+
+Corrigido
+- dialogos.py: adicionado o import de QSpinBox. Sem ele, JanelaCadastro
+  lançava NameError ao abrir, e cadastrar e editar filme não
+  funcionavam.
+- Janela.cadastrar_filme e Janela.editar_filme: passam a enviar o
+  número de cópias à API (antes o valor era lido do diálogo, mas não
+  era enviado, e o filme ficava sempre com 1 cópia).
+- filmes.py: as consultas Cypher das recomendações davam erro de
+  sintaxe (ORDER BY usava rec.titulo depois de uma agregação), e a
+  rota devolvia sempre lista vazia. Agora as consultas retornam o
+  título (AS titulo) e ordenam por ele.
+- filmes.py: _ids_recomendados passou a usar log.exception, para que o
+  erro real do Neo4j apareça no log da API.
+- filmes.py: GET /filmes/recomendados/{login} confere no PostgreSQL e
+  remove filmes que o usuário já alugou, mesmo que o grafo esteja
+  desatualizado.
+- telaFilme.py: corrigido o AttributeError ('NoneType' sem
+  deleteLater) ao atualizar a lista de avaliações, que travava a
+  edição de filmes pelo Admin.
+- cartaoFilme.py: corrigido o RuntimeError "CartaoFilme already
+  deleted". O sinal clicado agora é emitido com QTimer.singleShot(0),
+  depois de o evento do mouse terminar, para que a lista possa ser
+  redesenhada enquanto a TelaFilme está aberta.
+- janelaPrincipal.py: baixar_posters passou a ser chamado de fato (ao
+  abrir, em recarregar e em sincronizar).

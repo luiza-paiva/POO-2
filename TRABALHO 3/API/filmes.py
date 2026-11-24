@@ -3,6 +3,7 @@ import uuid
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
+from posters import renomear_poster
 
 from db import driver, pg
 
@@ -223,6 +224,7 @@ def editar(filme_id: str, f: FilmeEntrada):
     titulo = f.titulo.strip()
     with pg() as conn:
         genero_id = _id_genero(conn, f.genero)
+        antigo = conn.execute("SELECT titulo FROM filmes WHERE id = %s", (filme_id,)).fetchone()
         ativos = conn.execute(
             "SELECT COUNT(*) FROM alugueis WHERE filme_id = %s AND data_devolucao IS NULL",
             (filme_id,),
@@ -237,6 +239,8 @@ def editar(filme_id: str, f: FilmeEntrada):
         )
         if cur.rowcount == 0:
             raise HTTPException(status_code=404, detail="Filme não encontrado")
+    if antigo:
+        renomear_poster(antigo[0], titulo)
     _replicar_filme(filme_id, titulo, f.genero)
     return {"id": filme_id, "titulo": titulo, "genero": f.genero}
 

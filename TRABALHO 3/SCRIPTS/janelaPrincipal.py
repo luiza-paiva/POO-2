@@ -1,3 +1,6 @@
+import os
+import shutil
+from cartaoFilme import FileiraGenero, caminho_poster, PASTA_CACHE, EXTENSOES
 from PySide6.QtWidgets import (
     QWidget, QMainWindow, QToolBar, QLabel, QLineEdit,
     QPushButton, QVBoxLayout, QHBoxLayout, QDialog, QButtonGroup,
@@ -68,6 +71,7 @@ class Janela(QMainWindow):
             self.acaoExcluir.triggered.connect(self.excluir_filme)
 
             self.menuFilme.addAction(self.acaoCadastrar)
+            self.barra.addAction(self.acaoCadastrar)
             self.menuFilme.addAction(self.acaoEditar)
             self.menuFilme.addAction(self.acaoExcluir)
 
@@ -197,6 +201,20 @@ class Janela(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.sincronizar)
         self.timer.start(INTERVALO_SINCRONIZACAO_MS)
+
+    def enviar_poster(self, filme_id, caminho):
+        try:
+            clienteApi.enviar_poster(filme_id, caminho)
+        except clienteApi.ErroApi as erro:
+            QMessageBox.warning(self, "Aviso", f"Filme salvo, mas o pôster não foi enviado: {erro}")
+            return
+        os.makedirs(PASTA_CACHE, exist_ok=True)
+        for ext in EXTENSOES:
+            antigo = os.path.join(PASTA_CACHE, filme_id + ext)
+            if os.path.exists(antigo):
+                os.remove(antigo)
+        ext = os.path.splitext(caminho)[1].lower()
+        shutil.copyfile(caminho, os.path.join(PASTA_CACHE, filme_id + ext))
 
     # ------------------------------------------------------------------
     # Lista de filmes
@@ -372,10 +390,12 @@ class Janela(QMainWindow):
             sinopse = dialog.campoSinopse.toPlainText().strip()
             copias = dialog.campoCopias.value()
             try:
-                clienteApi.cadastrar_filme(titulo, genero, sinopse, copias)
+                novo_id = clienteApi.cadastrar_filme(titulo, genero, sinopse, copias)
             except clienteApi.ErroApi as erro:
                 QMessageBox.warning(self, "Aviso", str(erro))
                 return
+            if dialog.caminhoPoster and novo_id:
+                self.enviar_poster(novo_id, dialog.caminhoPoster)
             self.recarregar()
 
     def editar_filme(self):
@@ -398,6 +418,8 @@ class Janela(QMainWindow):
             except clienteApi.ErroApi as erro:
                 QMessageBox.warning(self, "Aviso", str(erro))
                 return
+            if dialog.caminhoPoster:
+                self.enviar_poster(filme.id, dialog.caminhoPoster)
             self.recarregar()
 
     def excluir_filme(self):

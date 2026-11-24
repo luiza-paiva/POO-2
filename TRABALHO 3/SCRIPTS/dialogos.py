@@ -1,3 +1,5 @@
+import os
+from PySide6.QtWidgets import QFileDialog
 from PySide6.QtWidgets import (
     QWidget, QLabel, QLineEdit, QPushButton, QVBoxLayout, QListWidget,
     QDialog, QFormLayout, QComboBox, QPlainTextEdit, QCheckBox, QHBoxLayout,
@@ -34,7 +36,7 @@ class JanelaCadastro(QDialog):
     def __init__(self, titulo="", genero="", sinopse="", copias=1):
         super().__init__()
         self.setWindowTitle("Cadastrar/Editar Filme")
-        self.resize(420, 330)
+        self.resize(420, 380)
 
         self.campoTitulo = QLineEdit(titulo)
         self.campoGenero = QComboBox()
@@ -50,6 +52,14 @@ class JanelaCadastro(QDialog):
         self.campoSinopse = QPlainTextEdit(sinopse)
         self.campoSinopse.setPlaceholderText("Resumo do filme, sem revelar o final")
 
+        self.caminhoPoster = ""
+        self.botaoPoster = QPushButton("Escolher pôster...")
+        self.botaoPoster.clicked.connect(self.escolher_poster)
+        self.rotuloPoster = QLabel("Nenhum arquivo selecionado")
+        linhaPoster = QHBoxLayout()
+        linhaPoster.addWidget(self.botaoPoster)
+        linhaPoster.addWidget(self.rotuloPoster, 1)
+
         self.botaoSalvar = QPushButton("Salvar")
         self.botaoSalvar.clicked.connect(self.accept)
 
@@ -58,12 +68,20 @@ class JanelaCadastro(QDialog):
         layout.addRow("Gênero:", self.campoGenero)
         layout.addRow("Cópias:", self.campoCopias)
         layout.addRow("Sinopse:", self.campoSinopse)
+        layout.addRow("Pôster:", linhaPoster)
         layout.addRow(self.botaoSalvar)
         self.setLayout(layout)
 
     def closeEvent(self, event):
         print("Janela de cadastro fechada")
         event.accept()
+
+    def escolher_poster(self):
+        caminho, _ = QFileDialog.getOpenFileName(
+            self, "Escolher pôster", "", "Imagens (*.jpg *.jpeg *.png *.webp)")
+        if caminho:
+            self.caminhoPoster = caminho
+            self.rotuloPoster.setText(os.path.basename(caminho))
 
 
 class JanelaHistorico(QDialog):

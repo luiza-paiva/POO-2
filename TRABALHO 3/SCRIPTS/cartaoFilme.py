@@ -36,7 +36,7 @@ def nome_arquivo_poster(titulo):
 
 
 def caminho_poster(filme):
-    for pasta in (PASTA_POSTERS, PASTA_CACHE):
+    for pasta in (PASTA_CACHE, PASTA_POSTERS):
         for nome in (nome_arquivo_poster(filme.titulo), filme.id):
             for ext in EXTENSOES:
                 caminho = os.path.join(pasta, nome + ext)

@@ -33,7 +33,18 @@ def _detalhe(resposta):
     except ValueError:
         return resposta.text
     if isinstance(detalhe, list):
-        return "; ".join(d.get("msg", "") for d in detalhe)
+        mensagens = []
+        for d in detalhe:
+            msg = d.get("msg", "")
+            ctx = d.get("ctx", {})
+            tipo = d.get("type", "")
+            campo = d.get("loc", [""])[-1]
+            if tipo == "string_too_short":
+                msg = f"O campo '{campo}' precisa ter pelo menos {ctx.get('min_length')} caracteres."
+            elif tipo == "string_too_long":
+                msg = f"O campo '{campo}' pode ter no máximo {ctx.get('max_length')} caracteres."
+            mensagens.append(msg)
+        return "; ".join(mensagens)
     return str(detalhe)
 
 
@@ -134,9 +145,11 @@ def _requisitar(metodo, caminho, corpo=None):
         raise ErroApi("API fora do ar")
     if resposta.status_code not in (200, 201, 204):
         raise ErroApi(_detalhe(resposta))
+    return resposta
 
 def cadastrar_filme(titulo, genero, sinopse="", copias=1):
-    _requisitar("POST", "/filmes", {"titulo": titulo, "genero": genero, "sinopse": sinopse, "copias": copias})
+    resposta = _requisitar("POST", "/filmes", {"titulo": titulo, "genero": genero, "sinopse": sinopse, "copias": copias})
+    return resposta.json().get("id")
 
 def editar_filme(filme_id, titulo, genero, sinopse="", copias=1):
     _requisitar("PUT", f"/filmes/{filme_id}", {"titulo": titulo, "genero": genero, "sinopse": sinopse, "copias": copias})
@@ -161,6 +174,22 @@ def listar_avaliacoes(filme_id):
     if resposta.status_code == 200:
         return resposta.json()
     raise ErroApi(_detalhe(resposta))
+
+def enviar_poster(filme_id, caminho):
+    tipos = {".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+             ".png": "image/png", ".webp": "image/webp"}
+    tipo = tipos.get(os.path.splitext(caminho)[1].lower())
+    if tipo is None:
+        raise ErroApi("Use uma imagem JPG, PNG ou WEBP")
+    with open(caminho, "rb") as f:
+        dados = f.read()
+    try:
+        resposta = requests.put(f"{URL_BASE}/posters/{filme_id}", data=dados,
+                                headers={"Content-Type": tipo}, timeout=15)
+    except requests.exceptions.RequestException:
+        raise ErroApi("API fora do ar")
+    if resposta.status_code not in (200, 204):
+        raise ErroApi(_detalhe(resposta))
 
 if __name__ == "__main__":
     filmes = listar_filmes()
