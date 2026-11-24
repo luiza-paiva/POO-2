@@ -282,10 +282,13 @@ Alterado
   clareado (de 220 para 240).
 
 
-
 ------------------------------------------------------------------------------------------------
 ENTREGA FINAL - TRABALHO 3
 ------------------------------------------------------------
+
+Adicionado - Infraestrutura
+- Tailscale: o servidor (Docker Compose) é acessado pelos aplicativos
+  por meio de uma rede privada Tailscale, sem expor a API na internet.
 
 Adicionado - API
 - avaliacoes.py: POST /avaliacoes e GET /avaliacoes/{filme_id}. Só
@@ -320,6 +323,8 @@ Adicionado - API
 - esquema.sql: coluna copias (padrão 1, mínimo 1) na tabela filmes. O
   índice ux_aluguel_ativo passou a valer por usuário e filme, em vez
   de só por filme.
+- posters.py: GET /posters/{filme_id}, que devolve o pôster do filme a
+  partir da pasta API/posters (404 se não houver).
 
 Adicionado - Cliente da API (clienteApi.py)
 - login, cadastrar, listar_filmes, alugar, devolver, historico,
@@ -328,14 +333,26 @@ Adicionado - Cliente da API (clienteApi.py)
   (ErroApi).
 - listar_filmes recebe o login do usuário; cadastrar_filme e
   editar_filme enviam o número de cópias.
+- clienteApi.py: o endereço do servidor é lido da variável de ambiente
+  LOCADORA_API; sem ela, usa o endereço do servidor na rede Tailscale.
+- clienteApi.baixar_poster: baixa o pôster pela API.
+- BaixarPosters (tarefas_arquivo.py): QThread que baixa em segundo plano
+  os pôsteres que faltam e guarda em dados/cache_posters.
+- cartaoFilme.caminho_poster: passa a procurar também no cache.
+- Janela.baixar_posters: dispara o download ao abrir, recarregar e
+  sincronizar, sem iniciar um novo download enquanto outro está em
+  andamento.
 
 Adicionado - Interface
 - Janela.carregar_recomendados e fileira "Recomendados para você" no
-  topo da tela principal, só para usuário comum e quando não há busca
-  nem filtro de gênero ativos. Some se não houver sugestões.
+  final da tela principal (depois das fileiras por gênero), só para
+  usuário comum e quando não há busca nem filtro de gênero ativos.
+  Some se não houver sugestões. Filmes sem cópia disponível também
+  são sugeridos e aparecem com o selo "Indisponível".
 - Janela.sincronizar: um timer (INTERVALO_SINCRONIZACAO_MS, 5 s) busca
-  o catálogo na API e só redesenha se algo mudou. Atualiza a TelaFilme
-  aberta e a fecha se o filme foi excluído por outro usuário.
+  o catálogo e as recomendações na API e só redesenha se algo mudou.
+  Atualiza a TelaFilme aberta e a fecha se o filme foi excluído por
+  outro usuário.
 - JanelaCadastro (dialogos.py): campo Cópias (1 a 99), usado ao
   cadastrar e ao editar um filme.
 - Filme (models.py): novos campos copias e copias_disponiveis.
@@ -346,7 +363,9 @@ Alterado - Interface (o app passa a usar a API em vez de arquivos)
   histórico agora são feitos pela API.
 - Janela.carregar_filmes_da_api e Janela.recarregar: carregam o
   catálogo da API e mantêm o filme selecionado.
-- Janela.atualizar_lista: média e quantidade de avaliações vêm da API.
+- Janela.atualizar_lista: média e quantidade de avaliações vêm da API;
+  a fileira "Recomendados para você" passou do topo para o final do
+  catálogo.
 - Janela.exportar_historico: exporta o histórico vindo da API.
 - TelaFilme: as avaliações vêm da API (listar_avaliacoes).
 - Filme (models.py): novos campos media e qtd_avaliacoes.
@@ -360,6 +379,12 @@ Alterado - Interface (o app passa a usar a API em vez de arquivos)
 - Janela.abrir_alugar e Janela.devolver_filme: mensagens e validações
   ajustadas ao controle por cópias (devolver exige que o usuário
   tenha alugado o filme).
+- Janela (barra de ferramentas): removidos os botões Alugar Filme,
+  Devolver Filme e Avaliar Filme (usuário) e Cadastrar Filme, Editar
+  Filme e Excluir Filme (Admin). As ações continuam no menu Filme,
+  com os mesmos atalhos (Ctrl+R, Ctrl+D, Ctrl+B, Ctrl+N, Ctrl+E e
+  Delete), e também na TelaFilme. A barra ficou com Ver Histórico,
+  Exportar Histórico (Admin), Alternar tema, Sair da conta e Atalhos.
 
 Removido
 - Uso local de filmes.json, alugueis.csv, avaliacoes.json e
@@ -372,7 +397,8 @@ Removido
   conexaoBanco.py (acesso direto ao Neo4j, pois o cliente só fala com
   a API) e teste.py.
 - tarefas_arquivo.py: classes GravarDados, CarregarHistorico e
-  GravarAvaliacoes. Ficou só ExportarHistorico.
+  GravarAvaliacoes. Ficou só ExportarHistorico (e BaixarPosters,
+  adicionada).
 - JanelaLogin: deixou de criar o registroUsuarios.
 - tema.py: passou a definir o próprio PASTA_DADOS em vez de importar
   do repositorio.py.
@@ -384,23 +410,21 @@ Corrigido
 - Janela.cadastrar_filme e Janela.editar_filme: passam a enviar o
   número de cópias à API (antes o valor era lido do diálogo, mas não
   era enviado, e o filme ficava sempre com 1 cópia).
-
-Alterado - Interface
-- Janela (barra de ferramentas): removidos os botões Alugar Filme,
-  Devolver Filme e Avaliar Filme (usuário) e Cadastrar Filme, Editar
-  Filme e Excluir Filme (Admin). As ações continuam no menu Filme,
-  com os mesmos atalhos (Ctrl+R, Ctrl+D, Ctrl+B, Ctrl+N, Ctrl+E e
-  Delete), e também na TelaFilme. A barra ficou com Ver Histórico,
-  Exportar Histórico (Admin), Alternar tema, Sair da conta e Atalhos.
-
-Adicionado - API
-- posters.py: GET /posters/{filme_id}, que devolve o pôster do filme a
-  partir da pasta API/posters (404 se não houver).
-
-Adicionado - Cliente
-- clienteApi.baixar_poster: baixa o pôster pela API.
-- BaixarPosters (tarefas_arquivo.py): QThread que baixa em segundo plano
-  os pôsteres que faltam e guarda em dados/cache_posters.
-- cartaoFilme.caminho_poster: passa a procurar também no cache.
-- Janela.baixar_posters: dispara o download ao abrir, recarregar e
-  sincronizar.
+- filmes.py: as consultas Cypher das recomendações davam erro de
+  sintaxe (ORDER BY usava rec.titulo depois de uma agregação), e a
+  rota devolvia sempre lista vazia. Agora as consultas retornam o
+  título (AS titulo) e ordenam por ele.
+- filmes.py: _ids_recomendados passou a usar log.exception, para que o
+  erro real do Neo4j apareça no log da API.
+- filmes.py: GET /filmes/recomendados/{login} confere no PostgreSQL e
+  remove filmes que o usuário já alugou, mesmo que o grafo esteja
+  desatualizado.
+- telaFilme.py: corrigido o AttributeError ('NoneType' sem
+  deleteLater) ao atualizar a lista de avaliações, que travava a
+  edição de filmes pelo Admin.
+- cartaoFilme.py: corrigido o RuntimeError "CartaoFilme already
+  deleted". O sinal clicado agora é emitido com QTimer.singleShot(0),
+  depois de o evento do mouse terminar, para que a lista possa ser
+  redesenhada enquanto a TelaFilme está aberta.
+- janelaPrincipal.py: baixar_posters passou a ser chamado de fato (ao
+  abrir, em recarregar e em sincronizar).
